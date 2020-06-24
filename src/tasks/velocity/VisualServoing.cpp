@@ -1,5 +1,6 @@
 #include <opensot_visual_seroving/tasks/velocity/VisualServoing.h>
 #include <visp/vpServo.h>
+#include <boost/make_shared.hpp>
 
 
 using namespace OpenSoT::tasks::velocity;
@@ -9,33 +10,28 @@ VisualServoing::VisualServoing(std::string task_id,
                                XBot::ModelInterface &robot,
                                std::string base_link,
                                std::string camera_link):
-    Cartesian(task_id, x, robot, camera_link, base_link)
+    Task(task_id, x.size())
 {
-    _lambda = 0.0; //visual servoing task does not use feedback control law in Cartesian task
+    _cartesian_task = boost::make_shared<Cartesian>("cartesian_foo", x, robot, camera_link, base_link);
+    _cartesian_task->setLambda(0.0); // not needed actually, just as reminder
+    _cartesian_task->setIsBodyJacobian(true); //we want to control the robot in camera_frame
 
-    _V.setIdentity(); //intialize sensor_frame and camera_frame coincident
-
-    _is_body_jacobian = true; //we want to control the robot in camera_frame
+    _V.setIdentity(); //intialize sensor_frame and camera_frame coincident 
+    _L.setZero(1,6); //initialized with zeros
 }
 
 void VisualServoing::_update(const Eigen::VectorXd &x)
 {
-    if (!_is_body_jacobian)
-    {
-        std::cerr << "_is_body_jacobian has to be set to true! Setting _is_body_jacobian to true" << std::endl;
-        _is_body_jacobian = true;
-    }
-
     //1) computes Cartesian quantities from Cartesian task
-    Cartesian::_update(x);
+    _cartesian_task->update(x);
+    _J = _cartesian_task->getA(); //body jacobian
 
-    _J = _A;
-    _v = _b;
+    //2) computes new Jacobian using the interaction matrix from VISP
+    Eigen::MatrixXd tmp = _J;
+    tmp.noalias() = _V*_J;
+    _A.noalias() = _L*tmp;
 
-    //2) computes new Jacobian and _b term using the interaction matrix from VISP
-    _J = _V*_A;
-    _A = _L*_J;
-    _b = _v;
+    //missing _b computation still!
 }
 
 void VisualServoing::setVelocityTwistMatrix(const Eigen::Matrix6d& V)
@@ -43,9 +39,9 @@ void VisualServoing::setVelocityTwistMatrix(const Eigen::Matrix6d& V)
     _V = V;
 }
 
-void VisualServoing::getVelocityTwistMatrix(Eigen::Matrix6d& V)
+const Eigen::Matrix6d& VisualServoing::getVelocityTwistMatrix() const
 {
-    V = _V;
+    return _V;
 }
 
 void VisualServoing::computeInteractionMatrix()
@@ -122,3 +118,63 @@ void VisualServoing::computeInteractionMatrixFromList(const std::list<vpBasicFea
 
    return;
 }
+
+void VisualServoing::addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, unsigned int select)
+
+{
+  _featureList.push_back(&s_cur);
+  _desiredFeatureList.push_back(&s_star);
+  _featureSelectionList.push_back(select);
+
+  computeInteractionMatrix();
+}
+
+bool VisualServoing::setFeatures(std::list<vpBasicFeature *>& feature_list,
+                 std::list<vpBasicFeature *>& desired_feature_list,
+                 std::list<unsigned int>& feature_selection_list)
+{
+    if(feature_list.size() != desired_feature_list.size())
+    {
+        std::cerr<<"feature_list.size() != desired_feature_list.size(): "<<feature_list.size()<<" != "<<desired_feature_list.size()<<std::endl;
+        return false;
+    }
+    if(feature_selection_list.size() != desired_feature_list.size())
+    {
+        std::cerr<<"feature_selection_list.size() != desired_feature_list.size(): "<<feature_selection_list.size()<<" != "<<desired_feature_list.size()<<std::endl;
+        return false;
+    }
+
+    _featureList = feature_list;
+    _desiredFeatureList = desired_feature_list;
+    _featureSelectionList = feature_selection_list;
+
+    computeInteractionMatrix();
+
+    return true;
+}
+
+const std::list<vpBasicFeature *>& VisualServoing::getFeatures() const
+{
+    return _featureList;
+}
+
+const std::list<vpBasicFeature *>& VisualServoing::getDesiredFeatures() const
+{
+    return _desiredFeatureList;
+}
+
+const std::string& VisualServoing::getBaseLink() const
+{
+    return _cartesian_task->getBaseLink();
+}
+
+const std::string& VisualServoing::getCameraLink() const
+{
+    return _cartesian_task->getDistalLink();
+}
+
+const Eigen::MatrixXd& VisualServoing::getInteractionMatrix() const
+{
+    return _L;
+}
+
