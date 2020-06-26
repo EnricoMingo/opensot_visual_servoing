@@ -9,15 +9,28 @@ VisualServoing::VisualServoing(std::string task_id,
                                const Eigen::VectorXd &x,
                                XBot::ModelInterface &robot,
                                std::string base_link,
-                               std::string camera_link):
-    Task(task_id, x.size())
+                               std::string camera_link,
+                               std::list<vpBasicFeature *>& feature_list):
+    Task(task_id, x.size()),
+    _featureList(feature_list),
+    _desiredFeatureList(feature_list),
+    _eye_in_hand(true)
 {
+    for(unsigned int i = 0; i < _featureList.size(); ++i)
+        _featureSelectionList.push_back(vpBasicFeature::FEATURE_ALL);
+
+
     _cartesian_task = boost::make_shared<Cartesian>("cartesian_foo", x, robot, camera_link, base_link);
     _cartesian_task->setLambda(0.0); // not needed actually, just as reminder
     _cartesian_task->setIsBodyJacobian(true); //we want to control the robot in camera_frame
 
     _V.setIdentity(); //intialize sensor_frame and camera_frame coincident 
-    _L.setZero(1,6); //initialized with zeros
+
+    computeInteractionMatrix(); //Here I am initializing _L
+    _W.setIdentity(_L.rows(),_L.rows()); //initialized
+    _hessianType = HST_SEMIDEF;
+
+    update(x);
 }
 
 void VisualServoing::_update(const Eigen::VectorXd &x)
@@ -30,8 +43,12 @@ void VisualServoing::_update(const Eigen::VectorXd &x)
     Eigen::MatrixXd tmp = _J;
     tmp.noalias() = _V*_J;
     _A.noalias() = _L*tmp;
+    if(!_eye_in_hand)
+        _A *= -1.;
 
-    //missing _b computation still!
+    //3)missing _b computation still!
+    compute_b();
+
 }
 
 void VisualServoing::setVelocityTwistMatrix(const Eigen::Matrix6d& V)
@@ -127,6 +144,8 @@ void VisualServoing::addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, u
   _featureSelectionList.push_back(select);
 
   computeInteractionMatrix();
+
+  _W.setIdentity(_L.rows(),_L.rows());
 }
 
 bool VisualServoing::setFeatures(std::list<vpBasicFeature *>& feature_list,
@@ -149,6 +168,7 @@ bool VisualServoing::setFeatures(std::list<vpBasicFeature *>& feature_list,
     _featureSelectionList = feature_selection_list;
 
     computeInteractionMatrix();
+    _W.setIdentity(_L.rows(),_L.rows());
 
     return true;
 }
@@ -177,4 +197,54 @@ const Eigen::MatrixXd& VisualServoing::getInteractionMatrix() const
 {
     return _L;
 }
+
+void VisualServoing::setEyeInHand()
+{
+    _eye_in_hand = true;
+}
+
+bool VisualServoing::isEyeInHand()
+{
+    return _eye_in_hand;
+}
+
+void VisualServoing::setEyeToHand()
+{
+    _eye_in_hand = false;
+}
+
+bool VisualServoing::isEyeToHand()
+{
+    return !_eye_in_hand;
+}
+
+void VisualServoing::compute_b()
+{
+    _b.resize(_L.rows());
+    std::list<vpBasicFeature*>::iterator desired_feature = _desiredFeatureList.begin();
+    std::list<unsigned int>::iterator selection = _featureSelectionList.begin();
+    unsigned int i = 0;
+    for(auto feature : _featureList)
+    {
+        Eigen::VectorXd tmp;
+        visp2eigen<Eigen::VectorXd>(feature->error(*(*desired_feature), *selection), tmp);
+        _b.segment(i, tmp.size()) << -_lambda*tmp;
+        i += tmp.size();
+        desired_feature++;
+        selection++;
+    }
+}
+
+bool VisualServoing::setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list)
+{
+    if(desired_feature_list.size() != _desiredFeatureList.size())
+    {
+        XBot::Logger::error("desired_feature_list.size() is %i, should be %i", desired_feature_list.size(), _desiredFeatureList.size());
+        return false;
+    }
+
+    _featureList = desired_feature_list;
+    return true;
+}
+
 

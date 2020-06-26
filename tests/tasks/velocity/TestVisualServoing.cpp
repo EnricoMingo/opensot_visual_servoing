@@ -34,9 +34,27 @@ protected:
         q.setZero(_model->getJointNum());
         setHomingPosition();
 
+        for(unsigned int i = 0; i < 4; ++i)
+        {
+            point_features.push_back(new vpFeaturePoint());
+            point_features.back()-> buildFrom(3*i, 3*i+1, 3*i+2);
+            point_features.back()->print();
+
+            desired_features.push_back(new vpFeaturePoint());
+            desired_features.back()-> buildFrom(2*3*i, 2*(3*i+1), 2*(3*i+2));
+            desired_features.back()->print();
+        }
+
+
+
+        std::list<vpBasicFeature *> generic_features(std::begin(point_features), std::end(point_features));
+
+
         vs_task = boost::make_shared<OpenSoT::tasks::velocity::VisualServoing>("visual_servoing", q,
                                                                                 *_model,
-                                                                                base_link, camera_frame);
+                                                                                base_link, camera_frame,
+                                                                                generic_features);
+
     }
 
     void setHomingPosition() {
@@ -60,6 +78,24 @@ protected:
 
     }
 
+    Eigen::MatrixXd computeInteractionMatrix(std::list<vpFeaturePoint*>& point_features)
+    {
+        Eigen::MatrixXd L(2*point_features.size(), 6);
+        L.setZero(L.rows(), L.cols());
+        int j = 0;
+        for(auto feature : point_features)
+        {
+            double x = feature->get_x();
+            double y = feature->get_y();
+            double Z = feature->get_Z();
+
+            L.row(j) <<  -1./Z,   0., x/Z, x*y, -(1.+x*x), y;
+            L.row(j+1) << 0., -1./Z, y/Z, 1.+y*y, -x*y , -x;
+            j += 2;
+        }
+        return L;
+    }
+
     virtual ~testVisualServoingTask()
     {
 
@@ -80,6 +116,8 @@ public:
     Eigen::VectorXd q;
     std::string base_link;
     std::string camera_frame;
+    std::list<vpFeaturePoint*> point_features;
+    std::list<vpFeaturePoint*> desired_features;
 
 
 
@@ -97,29 +135,33 @@ TEST_F(testVisualServoingTask, testBasics)
     I6.setIdentity();
     this->vs_task->setVelocityTwistMatrix(I6);
 
-    Eigen::MatrixXd i6(1,6); i6.setZero(1,6);
-    EXPECT_TRUE(this->vs_task->getInteractionMatrix() == i6);
-    std::cout<<"Default L matrix is: \n"<<this->vs_task->getInteractionMatrix()<<std::endl;
 
     EXPECT_TRUE(this->vs_task->getBaseLink() == this->base_link);
     std::cout<<"base_link is: "<<this->vs_task->getBaseLink()<<std::endl;
     EXPECT_TRUE(this->vs_task->getCameraLink() == this->camera_frame);
     std::cout<<"camera_link is: "<<this->vs_task->getCameraLink()<<std::endl;
 
-    vpFeaturePoint point_feature;
-    point_feature.buildFrom(1., 2., 1.);
-    vpFeaturePoint desired_point_feature;
-    point_feature.buildFrom(0., 0., 1.);
-    this->vs_task->addFeature(point_feature, desired_point_feature);
-    auto feature_list = this->vs_task->getFeatures();
-    EXPECT_EQ(feature_list.size(), 1);
-    auto desired_feature_list = this->vs_task->getDesiredFeatures();
-    EXPECT_EQ(desired_feature_list.size(), 1);
 
-   // std::cout<<"(*feature_list.begin())->get_s(): \n"<<(*feature_list.begin())->get_s()<<std::endl;
-   // std::cout<<"(*desired_feature_list.begin())->get_s(): \n"<<(*desired_feature_list.begin())->get_s()<<std::endl;
+    Eigen::MatrixXd L = this->vs_task->getInteractionMatrix();
+    EXPECT_EQ(L.rows(), 2*point_features.size());
+    std::cout<<"L: \n"<<L<<std::endl;
 
+    Eigen::MatrixXd L_ = this->computeInteractionMatrix(this->point_features);
+    std::cout<<"L_: \n"<<L_<<std::endl;
 
+    Eigen::MatrixXd Le = L-L_;
+    EXPECT_NEAR(Eigen::Map<Eigen::RowVectorXd>(Le.data(), Le.size()).norm(), 0.0, 1e-6);
+    std::cout<<"Le.norm(): "<<Eigen::Map<Eigen::RowVectorXd>(Le.data(), Le.size()).norm()<<std::endl;
+
+    Eigen::MatrixXd W(L_.rows(), L_.rows());
+    W.setIdentity(W.rows(), W.rows());
+    EXPECT_TRUE(W == this->vs_task->getWeight());
+
+    std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
+    std::list<vpBasicFeature *> generic_desired_features(std::begin(this->desired_features), std::end(this->desired_features));
+    this->vs_task->setDesiredFeatures(generic_desired_features);
+    this->vs_task->update(this->q);
+    std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
 }
 
 }

@@ -21,12 +21,14 @@ namespace OpenSoT {
              * @param robot model
              * @param base_link of the visual servoing task
              * @param camera_link controlled camera link
+             * @param features to track
              */
             VisualServoing(std::string task_id,
                            const Eigen::VectorXd& x,
                            XBot::ModelInterface &robot,
                            std::string base_link,
-                           std::string camera_link);
+                           std::string camera_link,
+                           std::list<vpBasicFeature *>& feature_list);
 
 
             /**
@@ -52,7 +54,8 @@ namespace OpenSoT {
              * @param s_cur feature
              * @param s_star desired feature
              * @param select TODO: test this param!
-             * NOTE: every time a new feature is added the intearaction matrix is computed
+             * NOTE: every time a new feature is added the intearaction matrix is computed and Weight matrix is
+             * set to Identity
              */
             void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, unsigned int select = vpBasicFeature::FEATURE_ALL);
 
@@ -62,11 +65,19 @@ namespace OpenSoT {
              * @param desired_feature_list
              * @param feature_selection_list
              * @return false if inputs have different size
-             * NOTE: intearaction matrix is computed
+             * NOTE: every time a new feature is added the intearaction matrix is computed and Weight matrix is
+             * set to Identity
              */
             bool setFeatures(std::list<vpBasicFeature *>& feature_list,
                              std::list<vpBasicFeature *>& desired_feature_list,
                              std::list<unsigned int>& feature_selection_list);
+
+            /**
+             * @brief setDesiredFeatures is used to change the desired feature list
+             * @param desired_feature_list list of desired features
+             * @return false if the lenght of desired features is different from the actual lenght of features
+             */
+            bool setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list);
 
             /**
              * @brief getFeatures used to get feature list
@@ -102,8 +113,27 @@ namespace OpenSoT {
              */
             const std::string& getCameraLink() const;
 
+            /**
+             * @brief setEyeInHand: controll is computed for a camera mounted on the moving link
+             */
+            void setEyeInHand();
+
+            /**
+             * @brief isEyeInHand
+             * @return true or false
+             */
+            bool isEyeInHand();
+
+            /**
+             * @brief setEyeToHand: control is computed for a camera looking at the moving link
+             */
+            void setEyeToHand();
+            bool isEyeToHand();
+
        private:
             void _update(const Eigen::VectorXd& x);
+
+            void compute_b();
 
             /**
              * @brief _J stores temporary Jacobian from Cartesian task
@@ -131,13 +161,24 @@ namespace OpenSoT {
             template<typename Derived>
             void visp2eigen(const vpMatrix &src, Eigen::MatrixBase<Derived> &dst)
             {
-              dst = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(src.data, src.getRows(), src.getCols());
+                dst = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(src.data, src.getRows(), src.getCols());
+            }
+
+            template<typename Derived>
+            void visp2eigen(const vpColVector& src, Eigen::MatrixBase<Derived> &dst)
+            {
+                dst = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, 1> >(src.data, src.getRows());
             }
 
             /**
              * @brief _cartesian_task internal, use for computation purposes
              */
             Cartesian::Ptr _cartesian_task;
+
+            /**
+             * @brief _eye_in_hand, if false means: eye_to_hand
+             */
+            bool _eye_in_hand;
 
 
        };
