@@ -157,11 +157,42 @@ TEST_F(testVisualServoingTask, testBasics)
     W.setIdentity(W.rows(), W.rows());
     EXPECT_TRUE(W == this->vs_task->getWeight());
 
+    Eigen::VectorXd expected_b(2*this->desired_features.size());
+    expected_b.setZero(expected_b.size());
+    EXPECT_TRUE(this->vs_task->getb() == expected_b);
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
     std::list<vpBasicFeature *> generic_desired_features(std::begin(this->desired_features), std::end(this->desired_features));
     this->vs_task->setDesiredFeatures(generic_desired_features);
     this->vs_task->update(this->q);
+    std::list<vpFeaturePoint*>::iterator p = this->desired_features.begin();
+    unsigned int i = 0;
+    for(auto point_feature : this->point_features)
+    {
+        vpColVector error = point_feature->error(*(*p));
+        expected_b[i] = error[0];
+        expected_b[i+1] = error[1];
+        i+=2;
+        p++;
+    }
+    std::cout<<"expected_b: \n"<<expected_b<<std::endl;
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
+    EXPECT_TRUE(this->vs_task->getb() == expected_b);
+
+    i = 0;
+    for(auto point_feature : this->point_features)
+    {
+        point_feature->set_x(2*3*i);
+        point_feature->set_y(2*(3*i+1));
+        point_feature->set_Z(2*(3*i+2));
+        i++;
+    }
+    this->vs_task->update(this->q);
+    expected_b.setZero(expected_b.size());
+    std::cout<<"expected_b: \n"<<expected_b<<std::endl;
+    std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
+    EXPECT_TRUE(this->vs_task->getb() == expected_b);
+
+
 }
 
 }
