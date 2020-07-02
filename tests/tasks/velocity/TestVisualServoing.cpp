@@ -124,6 +124,23 @@ public:
 
 };
 
+TEST_F(testVisualServoingTask, testInteractionMatrix)
+{
+    vpMatrix L_visp;
+    std::list<unsigned int> feature_selection = {vpBasicFeature::FEATURE_ALL,2,0,0};
+    std::list<vpBasicFeature *> generic_features(std::begin(point_features), std::end(point_features));
+    this->vs_task->computeInteractionMatrixFromList(generic_features,
+                                                    feature_selection, L_visp);
+
+    Eigen::MatrixXd L(L_visp.getRows(), L_visp.getCols());
+    this->vs_task->visp2eigen(L_visp, L);
+
+    EXPECT_EQ(L.rows(), 3);
+
+    std::cout<<"L: \n"<<L<<std::endl;
+
+}
+
 TEST_F(testVisualServoingTask, testBasics)
 {
     Eigen::Matrix6d I6; I6.setIdentity();

@@ -66,9 +66,9 @@ void VisualServoing::computeInteractionMatrix()
     computeInteractionMatrixFromList(_featureList, _featureSelectionList, _L_visp);
     visp2eigen<Eigen::MatrixXd>(_L_visp, _L);
 
-    if(_row_indices.size() > 0)
+    if(_col_indices.size() > 0)
     {
-        for(std::list<unsigned int>::iterator i = _row_indices.begin(); i != _row_indices.end(); i++)
+        for(std::list<unsigned int>::iterator i = _col_indices.begin(); i != _col_indices.end(); i++)
             _L.col(*i).setZero();
     }
 }
@@ -253,11 +253,30 @@ bool VisualServoing::setDesiredFeatures(std::list<vpBasicFeature *>& desired_fea
     return true;
 }
 
+bool VisualServoing::setFeatureSelectionList(std::list<unsigned int>& feature_selection_list)
+{
+    if(feature_selection_list.size() != _featureSelectionList.size())
+    {
+        XBot::Logger::error("feature_selection_list.size() is %i, should be %i", feature_selection_list.size(), _featureSelectionList.size());
+        return false;
+    }
+
+    _featureSelectionList = feature_selection_list;
+    return true;
+}
+
+const std::list<unsigned int>& VisualServoing::getFeatureListSelection() const
+{
+    return _featureSelectionList;
+}
+
 VisualServoing::Ptr OpenSoT::tasks::velocity::operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices)
 {
-    task->_row_indices = rowIndices;
+    task->_col_indices = rowIndices;
     task->computeInteractionMatrix();
     return task;
 }
+
+
 
 

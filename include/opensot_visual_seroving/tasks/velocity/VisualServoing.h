@@ -22,6 +22,9 @@ namespace OpenSoT {
              * @param base_link of the visual servoing task
              * @param camera_link controlled camera link
              * @param features to track
+             * NOTE:
+             * in construction all the features (rows of the interaction matrix) are tracked.
+             * To change this use the method
              */
             VisualServoing(std::string task_id,
                            const Eigen::VectorXd& x,
@@ -53,7 +56,8 @@ namespace OpenSoT {
              * @brief addFeature used to insert a new couple of feature and desired feature
              * @param s_cur feature
              * @param s_star desired feature
-             * @param select TODO: test this param!
+             * @param select point to a row of the interaction matrix associated to a specific feature.
+             * To select all the feature just use vpBasicFeature::FEATURE_ALL
              * NOTE: every time a new feature is added the intearaction matrix is computed and Weight matrix is
              * set to Identity
              */
@@ -63,7 +67,8 @@ namespace OpenSoT {
              * @brief setFeatures used to set a list of new features and desired features
              * @param feature_list
              * @param desired_feature_list
-             * @param feature_selection_list
+             * @param feature_selection_list each element of this list point to a row of the interaction matrix
+             * associated to a specific feature. To select all the feature just use vpBasicFeature::FEATURE_ALL
              * @return false if inputs have different size
              * NOTE: every time a new feature is added the intearaction matrix is computed and Weight matrix is
              * set to Identity
@@ -80,6 +85,14 @@ namespace OpenSoT {
             bool setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list);
 
             /**
+             * @brief setFeatureSelectionList is used to change feature selection list
+             * @param feature_selection_list, each element of this list point to a row of the interaction matrix
+             * associated to a specific feature. To select all the feature just use vpBasicFeature::FEATURE_ALL
+             * @return false if size of the feature_selection_list is different from the number of features
+             */
+            bool setFeatureSelectionList(std::list<unsigned int>& feature_selection_list);
+
+            /**
              * @brief getFeatures used to get feature list
              * @return list of features
              */
@@ -91,6 +104,11 @@ namespace OpenSoT {
              */
             const std::list<vpBasicFeature *>& getDesiredFeatures() const;
 
+            /**
+             * @brief getFeatureListSelection to get list of selection features
+             * @return list of selection features
+             */
+            const std::list<unsigned int>& getFeatureListSelection() const;
 
             /**
              * @brief computeInteractionMatrixFromList used to compyte interaction matrix
@@ -135,11 +153,41 @@ namespace OpenSoT {
              */
             bool isEyeToHand();
 
+
+            template<typename Derived>
+            /**
+             * @brief visp2eigen convert a visp matrix in eigen matrix
+             * @param src vpMatrix
+             * @param dst eigen matrix
+             */
+            static void visp2eigen(const vpMatrix &src, Eigen::MatrixBase<Derived> &dst)
+            {
+                dst = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(src.data, src.getRows(), src.getCols());
+            }
+
+            template<typename Derived>
+            /**
+             * @brief visp2eigen convert a visp vector in eigen vector
+             * @param src vpColVector
+             * @param dst eigen vector
+             */
+            static void visp2eigen(const vpColVector& src, Eigen::MatrixBase<Derived> &dst)
+            {
+                dst = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, 1> >(src.data, src.getRows());
+            }
+
             friend VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
 
        private:
+            /**
+             * @brief _update
+             * @param x
+             */
             void _update(const Eigen::VectorXd& x);
 
+            /**
+             * @brief compute_b
+             */
             void compute_b();
 
             /**
@@ -153,8 +201,19 @@ namespace OpenSoT {
              */
             Eigen::Matrix6d _V;
 
+            /**
+             * @brief _featureList
+             */
             std::list<vpBasicFeature *> _featureList;
+
+            /**
+             * @brief _desiredFeatureList
+             */
             std::list<vpBasicFeature *> _desiredFeatureList;
+
+            /**
+             * @brief _featureSelectionList
+             */
             std::list<unsigned int> _featureSelectionList;
 
             /**
@@ -163,19 +222,10 @@ namespace OpenSoT {
             Eigen::MatrixXd _L;
             vpMatrix _L_visp;
 
+            /**
+             * @brief computeInteractionMatrix
+             */
             void computeInteractionMatrix();
-
-            template<typename Derived>
-            void visp2eigen(const vpMatrix &src, Eigen::MatrixBase<Derived> &dst)
-            {
-                dst = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(src.data, src.getRows(), src.getCols());
-            }
-
-            template<typename Derived>
-            void visp2eigen(const vpColVector& src, Eigen::MatrixBase<Derived> &dst)
-            {
-                dst = Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, 1> >(src.data, src.getRows());
-            }
 
             /**
              * @brief _cartesian_task internal, use for computation purposes
@@ -187,7 +237,10 @@ namespace OpenSoT {
              */
             bool _eye_in_hand;
 
-            std::list<unsigned int> _row_indices;
+            /**
+             * @brief _col_indices is used to cut specific direction in Cartesian space
+             */
+            std::list<unsigned int> _col_indices;
 
 
        };
@@ -196,8 +249,6 @@ namespace OpenSoT {
         * @brief operator % Needs to be redefined for the VisualServoing task in order to have that the % operation
         * remove Cartesian direction instead of features rows.
         * At the moment the method is implemented so that columns of the interaction matrix are set to zero.
-        * TODO:
-        *   test the use of _featureSelectionList
         *
         * @param task
         * @param rowIndices
