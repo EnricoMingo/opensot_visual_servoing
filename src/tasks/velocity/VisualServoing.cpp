@@ -3,6 +3,7 @@
 #include <boost/make_shared.hpp>
 
 
+
 using namespace OpenSoT::tasks::velocity;
 
 VisualServoing::VisualServoing(std::string task_id,
@@ -268,6 +269,37 @@ bool VisualServoing::setFeatureSelectionList(std::list<unsigned int>& feature_se
 const std::list<unsigned int>& VisualServoing::getFeatureListSelection() const
 {
     return _featureSelectionList;
+}
+
+void VisualServoing::_log(XBot::MatLogger::Ptr logger)
+{
+    if(_L.rows() > 0)
+        logger->add(_task_id + "_L", _L);
+
+    if(_featureList.size() > 0)
+    {
+        int j = 0;
+        std::list<vpBasicFeature *>::iterator feature;
+        std::list<vpBasicFeature *>::iterator desired_feature;
+        for(feature = _featureList.begin(), desired_feature = _desiredFeatureList.begin();
+            feature != _featureList.end() && desired_feature != _desiredFeatureList.end();
+            feature++, desired_feature++)
+        {
+            vpColVector s = (*feature)->get_s();
+            vpColVector sd = (*desired_feature)->get_s();
+
+            Eigen::VectorXd f(s.size()), fd(sd.size());
+            for(unsigned int i = 0; i < s.size(); ++i)
+            {
+                f[i] = s[i];
+                fd[i] = sd[i];
+            }
+            logger->add(_task_id +"_s"+std::to_string(j), f);
+            logger->add(_task_id +"_sd"+std::to_string(j), fd);
+            j++;
+        }
+    }
+
 }
 
 VisualServoing::Ptr OpenSoT::tasks::velocity::operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices)

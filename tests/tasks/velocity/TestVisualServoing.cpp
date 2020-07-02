@@ -127,7 +127,7 @@ public:
 TEST_F(testVisualServoingTask, testInteractionMatrix)
 {
     vpMatrix L_visp;
-    std::list<unsigned int> feature_selection = {vpBasicFeature::FEATURE_ALL,2,0,0};
+    std::list<unsigned int> feature_selection = {vpBasicFeature::FEATURE_ALL,1,0,0};
     std::list<vpBasicFeature *> generic_features(std::begin(point_features), std::end(point_features));
     this->vs_task->computeInteractionMatrixFromList(generic_features,
                                                     feature_selection, L_visp);
@@ -143,6 +143,10 @@ TEST_F(testVisualServoingTask, testInteractionMatrix)
 
 TEST_F(testVisualServoingTask, testBasics)
 {
+    XBot::MatLogger::Ptr logger;
+    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testBasics");
+    this->vs_task->log(logger);
+
     Eigen::Matrix6d I6; I6.setIdentity();
     EXPECT_TRUE(this->vs_task->getVelocityTwistMatrix() == I6);
     std::cout<<"Default V matrix is: \n"<<this->vs_task->getVelocityTwistMatrix()<<std::endl;
@@ -167,6 +171,8 @@ TEST_F(testVisualServoingTask, testBasics)
     Eigen::MatrixXd L_ = this->computeInteractionMatrix(this->point_features);
     std::cout<<"L_: \n"<<L_<<std::endl;
 
+    this->vs_task->log(logger);
+
     Eigen::MatrixXd Le = L-L_;
     EXPECT_NEAR(Eigen::Map<Eigen::RowVectorXd>(Le.data(), Le.size()).norm(), 0.0, 1e-6);
     std::cout<<"Le.norm(): "<<Eigen::Map<Eigen::RowVectorXd>(Le.data(), Le.size()).norm()<<std::endl;
@@ -182,6 +188,9 @@ TEST_F(testVisualServoingTask, testBasics)
     std::list<vpBasicFeature *> generic_desired_features(std::begin(this->desired_features), std::end(this->desired_features));
     this->vs_task->setDesiredFeatures(generic_desired_features);
     this->vs_task->update(this->q);
+
+    this->vs_task->log(logger);
+
     std::list<vpFeaturePoint*>::iterator p = this->desired_features.begin();
     unsigned int i = 0;
     for(auto point_feature : this->point_features)
@@ -209,6 +218,9 @@ TEST_F(testVisualServoingTask, testBasics)
     std::cout<<"expected_b: \n"<<expected_b<<std::endl;
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
     EXPECT_TRUE(this->vs_task->getb() == expected_b);
+
+    this->vs_task->log(logger);
+    logger->flush();
 
 }
 

@@ -242,6 +242,12 @@ namespace OpenSoT {
              */
             std::list<unsigned int> _col_indices;
 
+            /**
+             * @brief _log log extra variables
+             * @param logger
+             */
+            virtual void _log(XBot::MatLogger::Ptr logger);
+
 
        };
 
