@@ -4,6 +4,8 @@
 #include <ros/package.h>
 #include <boost/make_shared.hpp>
 #include <visp/vpFeaturePoint.h>
+#include <OpenSoT/tasks/Aggregated.h>
+#include <OpenSoT/utils/AutoStack.h>
 
 namespace{
 
@@ -109,8 +111,6 @@ protected:
 
     }
 
-    XBot::ModelInterface::Ptr _model;
-
 public:
     OpenSoT::tasks::velocity::VisualServoing::Ptr vs_task;
     Eigen::VectorXd q;
@@ -118,6 +118,7 @@ public:
     std::string camera_frame;
     std::list<vpFeaturePoint*> point_features;
     std::list<vpFeaturePoint*> desired_features;
+    XBot::ModelInterface::Ptr _model;
 
 
 
@@ -192,6 +193,35 @@ TEST_F(testVisualServoingTask, testBasics)
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
     EXPECT_TRUE(this->vs_task->getb() == expected_b);
 
+}
+
+TEST_F(testVisualServoingTask, testJacobians)
+{
+    this->vs_task->update(this->q);
+    Eigen::MatrixXd A = this->vs_task->getA();
+    Eigen::MatrixXd b = this->vs_task->getb();
+
+    EXPECT_EQ(A.rows(), b.size());
+    EXPECT_EQ(A.rows(), 2*point_features.size());
+
+    std::cout<<"A: \n"<<A<<std::endl;
+
+    std::list<unsigned int> id = {0,2,3};
+    OpenSoT::tasks::Aggregated::TaskPtr vs = this->vs_task%id;
+    vs->update(this->q);
+
+    std::cout<<"vs->getA(): \n"<<vs->getA()<<std::endl;
+
+    EXPECT_FALSE(A == vs->getA());
+
+    OpenSoT::tasks::velocity::Cartesian::Ptr foo =
+            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("foo", this->q, *(this->_model),
+                                                                    this->camera_frame, this->base_link);
+
+    OpenSoT::tasks::Aggregated::TaskPtr aggr_tasks = foo%id + this->vs_task%id;
+
+    EXPECT_EQ(aggr_tasks->getA().rows(), vs->getA().rows() + id.size());
+    std::cout<<"aggr_tasks->getA(): \n"<<aggr_tasks->getA()<<std::endl;
 
 }
 

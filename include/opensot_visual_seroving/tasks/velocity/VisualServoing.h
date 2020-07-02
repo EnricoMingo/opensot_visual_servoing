@@ -128,7 +128,14 @@ namespace OpenSoT {
              * @brief setEyeToHand: control is computed for a camera looking at the moving link
              */
             void setEyeToHand();
+
+            /**
+             * @brief isEyeToHand
+             * @return true or false
+             */
             bool isEyeToHand();
+
+            friend VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
 
        private:
             void _update(const Eigen::VectorXd& x);
@@ -180,8 +187,23 @@ namespace OpenSoT {
              */
             bool _eye_in_hand;
 
+            std::list<unsigned int> _row_indices;
+
 
        };
+
+       /**
+        * @brief operator % Needs to be redefined for the VisualServoing task in order to have that the % operation
+        * remove Cartesian direction instead of features rows.
+        * At the moment the method is implemented so that columns of the interaction matrix are set to zero.
+        * TODO:
+        *   test the use of _featureSelectionList
+        *
+        * @param task
+        * @param rowIndices
+        * @return task
+        */
+       VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
        }
    }
 }
