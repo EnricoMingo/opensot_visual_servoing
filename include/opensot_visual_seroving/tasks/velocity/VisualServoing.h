@@ -77,6 +77,9 @@ namespace OpenSoT {
                              std::list<vpBasicFeature *>& desired_feature_list,
                              std::list<unsigned int>& feature_selection_list);
 
+            /** TO BE COMMENTED **/
+            bool setCurrentFeatures(std::list<vpBasicFeature *>& feature_list);
+
             /**
              * @brief setDesiredFeatures is used to change the desired feature list
              * @param desired_feature_list list of desired features

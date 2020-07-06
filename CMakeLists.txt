@@ -5,6 +5,7 @@ add_compile_options(-std=c++11)
 
 option(COMPILE_TESTS "Compile tests" FALSE)
 
+find_package(cartesian_interface)
 find_package(catkin REQUIRED COMPONENTS cartesian_interface roscpp urdf)
 find_package(OpenSoT REQUIRED)
 find_package(VISP REQUIRED)
