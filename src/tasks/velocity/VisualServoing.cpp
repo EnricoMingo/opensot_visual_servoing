@@ -143,6 +143,14 @@ void VisualServoing::computeInteractionMatrixFromList(const std::list<vpBasicFea
    return;
 }
 
+void VisualServoing::clearFeatures()
+{
+    _featureList.clear();
+    _desiredFeatureList.clear();
+    _featureSelectionList.clear();
+
+}
+
 void VisualServoing::addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, unsigned int select)
 
 {
