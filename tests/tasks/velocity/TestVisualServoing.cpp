@@ -406,7 +406,10 @@ TEST_F(testVisualServoingTask, testStandardVS)
         generic_curr_features.clear();
         std::copy(std::begin(this->point_features), std::end(this->point_features), std::back_inserter(generic_curr_features));
 
-        this->vs_task->setFeatures(generic_desired_features, generic_curr_features,feature_selection);
+        if(k == 0)
+            EXPECT_TRUE(this->vs_task->setFeatures(generic_curr_features, generic_desired_features,feature_selection));
+        else
+            EXPECT_TRUE(this->vs_task->setFeatures(generic_curr_features));
         
         // not sure I need this
         this->vs_task->update(this->q);
@@ -432,7 +435,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
 #endif
         
         // NOTE: I had to put a '-'
-        cam_vel = - Lpinv * b;
+        cam_vel = Lpinv * b;
 
         // We should use the projection of the point from the current pose of the camera
         s_dot = L * cam_vel;

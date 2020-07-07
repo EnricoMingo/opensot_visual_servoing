@@ -180,6 +180,19 @@ bool VisualServoing::setFeatures(std::list<vpBasicFeature *>& feature_list,
     return true;
 }
 
+bool VisualServoing::setFeatures(std::list<vpBasicFeature *>& feature_list)
+{
+    if(feature_list.size() != _featureList.size())
+    {
+        XBot::Logger::error("feature_list.size() is %i, should be %i", feature_list.size(), _featureList.size());
+        return false;
+    }
+
+    _featureList = feature_list;
+    computeInteractionMatrix();
+    return true;
+}
+
 const std::list<vpBasicFeature *>& VisualServoing::getFeatures() const
 {
     return _featureList;
@@ -252,19 +265,7 @@ bool VisualServoing::setDesiredFeatures(std::list<vpBasicFeature *>& desired_fea
 
     _desiredFeatureList = desired_feature_list;
     return true;
-}
-                     
-bool VisualServoing::setCurrentFeatures(std::list<vpBasicFeature *>& feature_list)
-{
-    if(feature_list.size() != _featureList.size())
-    {
-        XBot::Logger::error("feature_list.size() is %i, should be %i", feature_list.size(), _featureList.size());
-        return false;
-    }
-
-    _featureList = feature_list;
-    return true;
-}
+}               
 
 bool VisualServoing::setFeatureSelectionList(std::list<unsigned int>& feature_selection_list)
 {
