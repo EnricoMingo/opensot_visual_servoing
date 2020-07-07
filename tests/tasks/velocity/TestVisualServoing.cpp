@@ -7,6 +7,7 @@
 #include <OpenSoT/tasks/Aggregated.h>
 #include <OpenSoT/utils/AutoStack.h>
 
+
 namespace{
 
 class testVisualServoingTask: public ::testing::Test
@@ -182,7 +183,7 @@ TEST_F(testVisualServoingTask, testBasics)
 
     Eigen::VectorXd expected_b(2*this->desired_features.size());
     expected_b.setZero(expected_b.size());
-    EXPECT_TRUE(this->vs_task->getb() == expected_b);
+    EXPECT_TRUE(this->vs_task->getb() == -expected_b);
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
     std::list<vpBasicFeature *> generic_desired_features(std::begin(this->desired_features), std::end(this->desired_features));
     this->vs_task->setDesiredFeatures(generic_desired_features);
@@ -202,7 +203,7 @@ TEST_F(testVisualServoingTask, testBasics)
     }
     std::cout<<"expected_b: \n"<<expected_b<<std::endl;
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
-    EXPECT_TRUE(this->vs_task->getb() == expected_b);
+    EXPECT_TRUE(this->vs_task->getb() == -expected_b);
 
     i = 0;
     for(auto point_feature : this->point_features)
@@ -345,8 +346,20 @@ TEST_F(testVisualServoingTask, testStandardVS)
 
     std::cout << "L " << L << std::endl;
 
-    Eigen::MatrixXd Lpinv = L.completeOrthogonalDecomposition().pseudoInverse();
+    Eigen::MatrixXd Lpinv;
+#if EIGEN_WORLD_VERSION > 3 && EIGEN_MAJOR_VERSION >= 3
+    Lpinv = L.completeOrthogonalDecomposition().pseudoInverse();
+#else
+    Eigen::JacobiSVD<Eigen::MatrixXd> svd( L, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    Eigen::MatrixXd singularValuesInv(L.cols(), L.cols());
+    singularValuesInv.setZero();
+    int rank = svd.rank();
+    for(unsigned int i = 0; i < rank; ++i)
+        singularValuesInv(i,i) = 1./svd.singularValues()[i];
+    Lpinv = svd.matrixV()* singularValuesInv *svd.matrixU().transpose();
+#endif
     std::cout << "Lpinv " << Lpinv << std::endl;
+
 
     Eigen::VectorXd cam_vel(6,1);
     cam_vel = - Lpinv * b;
@@ -357,9 +370,9 @@ TEST_F(testVisualServoingTask, testStandardVS)
     std::cout << "Features dot: " << s_dot << std::endl;
     
     /// It should be implemented a function which project points on the image plane
-        
-    while (b.norm() > 0.1) {
-        
+
+    for(unsigned int k = 0; k < 1000; ++k){
+
         this->vs_task->log(logger);
 
         i = 0;
@@ -406,7 +419,17 @@ TEST_F(testVisualServoingTask, testStandardVS)
         this->vs_task->computeInteractionMatrixFromList(generic_curr_features, feature_selection, L_visp);
         this->vs_task->visp2eigen(L_visp, L);
 
+#if EIGEN_WORLD_VERSION > 3 && EIGEN_MAJOR_VERSION >= 3
         Lpinv = L.completeOrthogonalDecomposition().pseudoInverse();
+#else
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd( L, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        Eigen::MatrixXd singularValuesInv(L.cols(), L.cols());
+        singularValuesInv.setZero();
+        int rank = svd.rank();
+        for(unsigned int i = 0; i < rank; ++i)
+            singularValuesInv(i,i) = 1./svd.singularValues()[i];
+        Lpinv = svd.matrixV()* singularValuesInv *svd.matrixU().transpose();
+#endif
         
         // NOTE: I had to put a '-'
         cam_vel = - Lpinv * b;
@@ -417,8 +440,9 @@ TEST_F(testVisualServoingTask, testStandardVS)
         std::cout << "Norm of b: " << b.norm() << std::endl;
 
     }
+    EXPECT_LE(b.norm(), 1e-6);
 
-    std::cout << "Converged!" << std::endl;
+
     logger->flush();
 
 }
