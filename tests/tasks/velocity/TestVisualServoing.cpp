@@ -326,8 +326,8 @@ TEST_F(testVisualServoingTask, testStandardVS)
     };
 
     this->vs_task->setFeatures(
-            generic_desired_features,
             generic_curr_features,
+            generic_desired_features,
             feature_selection
     );
 
@@ -361,9 +361,8 @@ TEST_F(testVisualServoingTask, testStandardVS)
 #endif
     std::cout << "Lpinv " << Lpinv << std::endl;
 
-
     Eigen::VectorXd cam_vel(6,1);
-    cam_vel = - Lpinv * b;
+    cam_vel = Lpinv * b;
     std::cout << "Command: " << cam_vel << std::endl;
 
     Eigen::VectorXd s_dot(L_visp.getRows(),1);
@@ -397,7 +396,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
             
             point_feature->set_x(x_new);
             point_feature->set_y(y_new);
-            point_feature->set_Z(10);
+            point_feature->set_Z(1);
             
             i++;
         }
@@ -435,7 +434,6 @@ TEST_F(testVisualServoingTask, testStandardVS)
         Lpinv = svd.matrixV()* singularValuesInv *svd.matrixU().transpose();
 #endif
         
-        // NOTE: I had to put a '-'
         cam_vel = Lpinv * b;
 
         // We should use the projection of the point from the current pose of the camera
@@ -561,7 +559,7 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
 
             point_feature->set_x(x_new);
             point_feature->set_y(y_new);
-            point_feature->set_Z(10);
+            point_feature->set_Z(1);
 
             i++;
         }
