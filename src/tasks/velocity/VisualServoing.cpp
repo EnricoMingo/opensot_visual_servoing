@@ -250,7 +250,7 @@ bool VisualServoing::setDesiredFeatures(std::list<vpBasicFeature *>& desired_fea
         return false;
     }
 
-    _featureList = desired_feature_list;
+    _desiredFeatureList = desired_feature_list;
     return true;
 }
                      
