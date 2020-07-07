@@ -8,6 +8,9 @@
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/iHQP.h>
 
+#include <visp3/robot/vpSimulatorCamera.h>
+#include <visp3/visual_features/vpFeatureBuilder.h>
+#include <visp3/vs/vpServo.h>
 
 namespace{
 
@@ -255,6 +258,82 @@ TEST_F(testVisualServoingTask, testJacobians)
 
 }
 
+TEST_F(testVisualServoingTask, testProjection)
+{
+    // Taken from https://visp-doc.inria.fr/doxygen/visp-daily/tutorial-ibvs.html#ibvs_intro
+
+    std::cout << "testProjection" << std::endl;
+
+    XBot::MatLogger::Ptr logger;
+    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testProjection");
+    
+    vpHomogeneousMatrix cdMo(0, 0, 0.75, 0, 0, 0);
+    vpHomogeneousMatrix cMo(0.15, -0.1, 1., vpMath::rad(10), vpMath::rad(-10), vpMath::rad(50));
+    vpPoint point[4];
+    point[0].setWorldCoordinates(-0.1, -0.1, 0);
+    point[1].setWorldCoordinates(0.1, -0.1, 0);
+    point[2].setWorldCoordinates(0.1, 0.1, 0);
+    point[3].setWorldCoordinates(-0.1, 0.1, 0);
+
+    vpFeaturePoint p[4], pd[4];
+    this->vs_task->clearFeatures();
+    for (unsigned int i = 0; i < 4; i++) {
+      point[i].track(cdMo);
+      vpFeatureBuilder::create(pd[i], point[i]);
+      point[i].track(cMo);
+      vpFeatureBuilder::create(p[i], point[i]);
+      this->vs_task->addFeature(p[i], pd[i]);
+    }
+    
+    this->vs_task->update(this->q);
+    
+    //vpMatrix L_visp;
+    Eigen::MatrixXd L, Lpinv;
+    Eigen::VectorXd cam_vel(6,1);
+    vpColVector v;
+    Eigen::MatrixXd b;
+
+    double delta_t = 0.033;
+    
+    vpHomogeneousMatrix wMc, wMo;
+    vpSimulatorCamera robot;
+    robot.setSamplingTime(delta_t);
+    robot.getPosition(wMc);
+    wMo = wMc * cMo;
+
+    std::cout << "wMo: " << wMo << std::endl; 
+    
+    for (unsigned int iter = 0; iter < 3000; iter++) {
+
+        this->vs_task->log(logger);
+
+        L = this->vs_task->getInteractionMatrix();
+        b = this->vs_task->getb();
+
+        Lpinv = L.completeOrthogonalDecomposition().pseudoInverse();
+
+        cam_vel = Lpinv * b;
+        this->vs_task->eigen2visp<vpColVector>(cam_vel,v);
+
+        robot.setVelocity(vpRobot::CAMERA_FRAME, v);
+    
+        robot.getPosition(wMc);
+        
+        cMo = wMc.inverse() * wMo;
+        
+        this->vs_task->clearFeatures();
+        for (unsigned int i = 0; i < 4; i++) {
+            point[i].track(cMo);
+            vpFeatureBuilder::create(p[i], point[i]);
+            this->vs_task->addFeature(p[i], pd[i]);
+        }
+        this->vs_task->update(this->q);
+    
+    }
+    logger->flush();
+
+}
+
 TEST_F(testVisualServoingTask, testStandardVS)
 {
     XBot::MatLogger::Ptr logger;
@@ -439,9 +518,10 @@ TEST_F(testVisualServoingTask, testStandardVS)
         // We should use the projection of the point from the current pose of the camera
         s_dot = L * cam_vel;
 
-        std::cout << "Norm of b: " << b.norm() << std::endl;
-
     }
+
+    std::cout << "Norm of b: " << b.norm() << std::endl;
+
     EXPECT_LE(b.norm(), 1e-6);
 
 
@@ -592,9 +672,10 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
 
         //std::cout<<"s_dot: "<<s_dot<<std::endl;
 
-        std::cout << "Norm of b: " << this->vs_task->getb().norm() << std::endl;
-
     }
+
+    std::cout << "Norm of b: " << this->vs_task->getb().norm() << std::endl;
+
     EXPECT_LE(this->vs_task->getb().norm(), 1e-6);
 
 
