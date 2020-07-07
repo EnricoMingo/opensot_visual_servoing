@@ -6,6 +6,7 @@
 #include <visp/vpFeaturePoint.h>
 #include <OpenSoT/tasks/Aggregated.h>
 #include <OpenSoT/utils/AutoStack.h>
+#include <OpenSoT/solvers/iHQP.h>
 
 
 namespace{
@@ -444,6 +445,159 @@ TEST_F(testVisualServoingTask, testStandardVS)
 
     }
     EXPECT_LE(b.norm(), 1e-6);
+
+
+    logger->flush();
+
+}
+
+TEST_F(testVisualServoingTask, testOpenSoTTask)
+{
+    XBot::MatLogger::Ptr logger;
+    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testOpenSoTTask");
+
+    //std::cout << " point features: " << this->point_features.get_x << std::endl;
+    int i = 0;
+    for(auto point_feature : this->desired_features)
+    {
+        if (i == 0) {
+            point_feature->set_x(10);
+            point_feature->set_y(10);
+            point_feature->set_Z(1);
+        }
+        if (i == 1){
+            point_feature->set_x(-10);
+            point_feature->set_y(10);
+            point_feature->set_Z(1);
+        }
+        if (i == 2){
+            point_feature->set_x(-10);
+            point_feature->set_y(-10);
+            point_feature->set_Z(1);
+        }
+        if (i == 3){
+            point_feature->set_x(10);
+            point_feature->set_y(-10);
+            point_feature->set_Z(1);
+        }
+        i++;
+    }
+
+    i = 0;
+    for(auto point_feature : this->point_features)
+    {
+        if (i == 0) {
+            point_feature->set_x(5);
+            point_feature->set_y(5);
+            point_feature->set_Z(1);
+        }
+        if (i == 1){
+            point_feature->set_x(-5);
+            point_feature->set_y(5);
+            point_feature->set_Z(1);
+        }
+        if (i == 2){
+            point_feature->set_x(-5);
+            point_feature->set_y(-5);
+            point_feature->set_Z(1);
+        }
+        if (i == 3){
+            point_feature->set_x(5);
+            point_feature->set_y(-5);
+            point_feature->set_Z(1);
+        }
+        i++;
+    }
+
+    std::list<vpBasicFeature *> generic_desired_features(std::begin(this->desired_features), std::end(this->desired_features));
+    std::list<vpBasicFeature *> generic_curr_features(std::begin(this->point_features), std::end(this->point_features));
+
+    std::list<unsigned int> feature_selection = {
+        vpBasicFeature::FEATURE_ALL,
+        vpBasicFeature::FEATURE_ALL,
+        vpBasicFeature::FEATURE_ALL,
+        vpBasicFeature::FEATURE_ALL
+    };
+
+    this->vs_task->setFeatures(generic_curr_features, generic_desired_features, feature_selection);
+
+    OpenSoT::AutoStack::Ptr stack;
+    stack /= this->vs_task;
+
+    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack);
+
+
+    Eigen::VectorXd q = this->q;
+    Eigen::VectorXd dq(q.rows());
+    dq.setZero();
+
+    /// It should be implemented a function which project points on the image plane
+    Eigen::MatrixXd L = this->vs_task->getInteractionMatrix();
+    Eigen::VectorXd s_dot(L.rows(),1);
+    s_dot.setZero();
+
+    for(unsigned int k = 0; k < 1000; ++k){
+
+        this->vs_task->log(logger);
+
+        i = 0;
+        double delta_t = 0.033;
+        double x, x_new, y, y_new;
+        for(auto point_feature : this->point_features)
+        {
+            //std::cout << "---------------------------" << std::endl;
+            //std::cout << "i: " << i << std::endl;
+
+            x = point_feature->get_x();
+            y = point_feature->get_y();
+
+            //std::cout << "s: " << x << ", " << y << std::endl;
+            //std::cout << "s_dot: " << s_dot[2*i] << ", " << s_dot[2*i+1] << std::endl;
+
+            x_new = x + delta_t * s_dot[2*i];
+            y_new = y + delta_t * s_dot[2*i+1];
+
+            //std::cout << "s_new " << x_new  << ", " <<  y_new << std::endl;
+
+            point_feature->set_x(x_new);
+            point_feature->set_y(y_new);
+            point_feature->set_Z(10);
+
+            i++;
+        }
+
+        //std::cout << "x: " << x << std::endl;
+
+        generic_curr_features.clear();
+        std::copy(std::begin(this->point_features), std::end(this->point_features), std::back_inserter(generic_curr_features));
+
+        if(k == 0)
+            EXPECT_TRUE(this->vs_task->setFeatures(generic_curr_features, generic_desired_features,feature_selection));
+        else
+            EXPECT_TRUE(this->vs_task->setFeatures(generic_curr_features));
+
+        q += dq;
+        //std::cout<<"q: "<<q.transpose()<<std::endl;
+
+
+        this->_model->setJointPosition(q);
+        this->_model->update();
+
+        stack->update(q);
+
+        EXPECT_TRUE(solver->solve(dq));
+
+
+
+        // We should use the projection of the point from the current pose of the camera
+        s_dot = this->vs_task->getA() * dq;
+
+        //std::cout<<"s_dot: "<<s_dot<<std::endl;
+
+        std::cout << "Norm of b: " << this->vs_task->getb().norm() << std::endl;
+
+    }
+    EXPECT_LE(this->vs_task->getb().norm(), 1e-6);
 
 
     logger->flush();
