@@ -33,7 +33,8 @@ include_directories(include
 
 # cartesio_acceleration_support library
 add_library(OpenSoTVisualServoingTask SHARED
-    src/tasks/velocity/VisualServoing.cpp)
+    src/tasks/velocity/VisualServoing.cpp
+    src/utils/Utils.cpp)
 
 target_link_libraries(OpenSoTVisualServoingTask
     ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${VISP_LIBRARIES})
