@@ -10,7 +10,21 @@ find_package(catkin REQUIRED COMPONENTS cartesian_interface roscpp urdf)
 find_package(OpenSoT REQUIRED)
 find_package(VISP REQUIRED)
 
-catkin_package()
+###################################
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if you package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+
+    INCLUDE_DIRS
+
+    LIBRARIES
+    OpenSoTVisualServoingTask
+
+    )
 
 include_directories(include
     ${OpenSoT_INCLUDE_DIRS}
@@ -26,7 +40,12 @@ target_link_libraries(OpenSoTVisualServoingTask
 
 install(TARGETS OpenSoTVisualServoingTask
         DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
+
+install(DIRECTORY include DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+FILES_MATCHING PATTERN "*.h")
 
 if(COMPILE_TESTS)
   enable_testing()
