@@ -8,9 +8,14 @@
 #include <OpenSoT/utils/AutoStack.h>
 #include <OpenSoT/solvers/iHQP.h>
 
+#include <OpenSoT/tasks/velocity/Postural.h>
+
 #include <visp3/robot/vpSimulatorCamera.h>
 #include <visp3/visual_features/vpFeatureBuilder.h>
 #include <visp3/vs/vpServo.h>
+
+#include <opensot_visual_seroving/utils/Utils.h>
+#include <OpenSoT/constraints/velocity/VelocityLimits.h>
 
 namespace{
 
@@ -138,7 +143,7 @@ TEST_F(testVisualServoingTask, testInteractionMatrix)
                                                     feature_selection, L_visp);
 
     Eigen::MatrixXd L(L_visp.getRows(), L_visp.getCols());
-    this->vs_task->visp2eigen(L_visp, L);
+    visp2eigen<Eigen::MatrixXd>(L_visp, L);
 
     EXPECT_EQ(L.rows(), 3);
 
@@ -310,10 +315,22 @@ TEST_F(testVisualServoingTask, testProjection)
         L = this->vs_task->getInteractionMatrix();
         b = this->vs_task->getb();
 
+    #if EIGEN_WORLD_VERSION > 3 && EIGEN_MAJOR_VERSION >= 3
         Lpinv = L.completeOrthogonalDecomposition().pseudoInverse();
+    #else
+        Eigen::JacobiSVD<Eigen::MatrixXd> svd( L, Eigen::ComputeThinU | Eigen::ComputeThinV);
+        Eigen::MatrixXd singularValuesInv(L.cols(), L.cols());
+        singularValuesInv.setZero();
+        int rank = svd.rank();
+        for(unsigned int i = 0; i < rank; ++i)
+            singularValuesInv(i,i) = 1./svd.singularValues()[i];
+        Lpinv = svd.matrixV()* singularValuesInv *svd.matrixU().transpose();
+    #endif
+
 
         cam_vel = Lpinv * b;
-        this->vs_task->eigen2visp<vpColVector>(cam_vel,v);
+        eigen2visp<vpColVector>(cam_vel, v);
+
 
         robot.setVelocity(vpRobot::CAMERA_FRAME, v);
     
@@ -422,7 +439,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
     this->vs_task->computeInteractionMatrixFromList(generic_curr_features, feature_selection, L_visp);
 
     Eigen::MatrixXd L(L_visp.getRows(), L_visp.getCols());
-    this->vs_task->visp2eigen(L_visp, L);
+    visp2eigen<Eigen::MatrixXd>(L_visp, L);
 
     std::cout << "L " << L << std::endl;
 
@@ -499,7 +516,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
         //std::cout << "b: " << b << std::endl;
         //std::cout << "A: " << A << std::endl;
         this->vs_task->computeInteractionMatrixFromList(generic_curr_features, feature_selection, L_visp);
-        this->vs_task->visp2eigen(L_visp, L);
+        visp2eigen<Eigen::MatrixXd>(L_visp, L);
 
 #if EIGEN_WORLD_VERSION > 3 && EIGEN_MAJOR_VERSION >= 3
         Lpinv = L.completeOrthogonalDecomposition().pseudoInverse();
@@ -682,6 +699,36 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
     logger->flush();
 
 }
+
+TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
+{
+    XBot::MatLogger::Ptr logger;
+    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testOpenSoTTask");
+
+    OpenSoT::tasks::velocity::Cartesian::Ptr l_sole =
+            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_sole", this->q, *(this->_model), "l_sole", "world");
+
+    OpenSoT::tasks::velocity::Cartesian::Ptr r_sole =
+            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_sole", this->q, *(this->_model), "r_sole", "world");
+
+    OpenSoT::tasks::velocity::CoM::Ptr com =
+            boost::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
+
+    OpenSoT::tasks::velocity::Postural::Ptr postural =
+            boost::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
+
+    OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
+            boost::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(M_PI_2, 0.01, this->q.size());
+
+
+    OpenSoT::AutoStack::Ptr stack = ((l_sole + r_sole)/
+                                    (com + this->vs_task)/
+                                    (postural))<<vel_lims;
+
+
+    logger->flush();
+}
+
 
 }
 
