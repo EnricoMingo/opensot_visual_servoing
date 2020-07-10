@@ -1,6 +1,7 @@
 #include <opensot_visual_seroving/tasks/velocity/VisualServoing.h>
 #include <visp/vpServo.h>
 #include <boost/make_shared.hpp>
+#include <opensot_visual_seroving/utils/Utils.h>
 
 
 
@@ -36,19 +37,27 @@ VisualServoing::VisualServoing(std::string task_id,
 
 void VisualServoing::_update(const Eigen::VectorXd &x)
 {
-    //1) computes Cartesian quantities from Cartesian task
-    _cartesian_task->update(x);
-    _J = _cartesian_task->getA(); //body jacobian
+    if(_featureList.size() > 0)
+    {
+        //1) computes Cartesian quantities from Cartesian task
+        _cartesian_task->update(x);
+        _J = _cartesian_task->getA(); //body jacobian
 
-    //2) computes new Jacobian using the interaction matrix from VISP
-    Eigen::MatrixXd tmp = _J;
-    tmp.noalias() = _V*_J;
-    _A.noalias() = _L*tmp;
-    if(!_eye_in_hand)
-        _A *= -1.;
+        //2) computes new Jacobian using the interaction matrix from VISP
+        Eigen::MatrixXd tmp = _J;
+        tmp.noalias() = _V*_J;
+        _A.noalias() = _L*tmp;
+        if(!_eye_in_hand)
+            _A *= -1.;
 
-    //3)missing _b computation still!
-    compute_b();
+        //3) computes task error
+        compute_b();
+    }
+    else
+    {
+        _A.setZero(1,_x_size);
+        _b.setZero(1);
+    }
 
 }
 
@@ -148,7 +157,6 @@ void VisualServoing::clearFeatures()
     _featureList.clear();
     _desiredFeatureList.clear();
     _featureSelectionList.clear();
-
 }
 
 void VisualServoing::addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, unsigned int select)
