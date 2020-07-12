@@ -6,7 +6,7 @@ project(${PROJECTNAME})
 
 find_package(OpenSoT REQUIRED)
 find_package(XBotInterface REQUIRED)
-find_package(catkin REQUIRED COMPONENTS cartesian_interface roscpp urdf roslib)
+find_package(catkin REQUIRED COMPONENTS cartesian_interface roscpp urdf roslib kdl_parser robot_state_publisher)
 
 # compite GTest
 find_package(GTest)

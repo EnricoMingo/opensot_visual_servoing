@@ -17,6 +17,15 @@
 #include <opensot_visual_seroving/utils/Utils.h>
 #include <OpenSoT/constraints/velocity/VelocityLimits.h>
 
+#include <OpenSoT/constraints/TaskToConstraint.h>
+
+#include <ros/ros.h>
+#include <robot_state_publisher/robot_state_publisher.h>
+
+#include <OpenSoT/constraints/velocity/JointLimits.h>
+
+#include <tf/transform_broadcaster.h>
+
 namespace{
 
 class testVisualServoingTask: public ::testing::Test
@@ -60,6 +69,10 @@ protected:
 
 
         std::list<vpBasicFeature *> generic_features(std::begin(point_features), std::end(point_features));
+
+
+        _model->setJointPosition(q);
+        _model->update();
 
 
         vs_task = boost::make_shared<OpenSoT::tasks::velocity::VisualServoing>("visual_servoing", q,
@@ -700,8 +713,74 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
 
 }
 
+/**
+ * @brief publishRobotModel
+ * @param robot_state_publisher_
+ * @param world_broadcaster
+ * @param model
+ * NOTE: call this AFTER model.update()!
+ */
+void publishRobotModel(robot_state_publisher::RobotStatePublisher* robot_state_publisher_,
+                       tf::TransformBroadcaster* world_broadcaster,
+                       const XBot::ModelInterface* model)
+{
+    ros::Time t = ros::Time::now();
+
+    XBot::JointNameMap joint_unordered_map;
+    model->getJointPosition(joint_unordered_map);
+    std::map<std::string, double> joint_map;
+    std::vector<std::string> virtual_joints = {"VIRTUALJOINT_1", "VIRTUALJOINT_2", "VIRTUALJOINT_3", "VIRTUALJOINT_4", "VIRTUALJOINT_5", "VIRTUALJOINT_6"};
+    for(auto j : joint_unordered_map)
+    {
+        if(!(std::find(virtual_joints.begin(), virtual_joints.end(), j.first) != virtual_joints.end()))
+            joint_map[j.first] = j.second;
+    }
+
+    Eigen::Affine3d w_T_fb;
+    model->getFloatingBasePose(w_T_fb);
+
+
+    tf::Vector3 p;
+    p.setX(w_T_fb.translation()[0]);
+    p.setY(w_T_fb.translation()[1]);
+    p.setZ(w_T_fb.translation()[2]);
+    Eigen::Quaterniond qq(w_T_fb.linear());
+    tf::Quaternion rot;
+    rot.setX(qq.x());
+    rot.setY(qq.y());
+    rot.setZ(qq.z());
+    rot.setW(qq.w());
+    tf::Transform T(rot, p);
+
+
+    robot_state_publisher_->publishTransforms(joint_map, t, "");
+    world_broadcaster->sendTransform(tf::StampedTransform(T, t, "world", "Waist"));
+}
+
 TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 {
+    ///ROS RELATED PART:
+    int argc = 0;
+    char* argv[1] = {""};
+    ros::init(argc, argv, "testWholeBodyVisualServoing");
+    bool is_ros_running = ros::master::check();
+
+    std::shared_ptr<ros::NodeHandle> nh;
+    KDL::Tree tree;
+    std::shared_ptr<robot_state_publisher::RobotStatePublisher> robot_state_publisher_;
+    std::shared_ptr<tf::TransformBroadcaster> world_broadcaster;
+    std::shared_ptr<ros::Rate> rate;
+    if(is_ros_running)
+    {
+        nh = std::make_shared<ros::NodeHandle>();
+        nh->setParam("robot_description", this->_model->getUrdfString());
+        if(!kdl_parser::treeFromUrdfModel(_model->getUrdf(), tree))
+            ROS_ERROR("Failed to construct kdl tree");
+        robot_state_publisher_ = std::make_shared<robot_state_publisher::RobotStatePublisher>(tree);
+        world_broadcaster = std::make_shared<tf::TransformBroadcaster>();
+    }
+    ///
+
     XBot::MatLogger::Ptr logger;
     logger = XBot::MatLogger::getLogger("testVisualServoingTask_testOpenSoTTask");
 
@@ -713,18 +792,116 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
     OpenSoT::tasks::velocity::CoM::Ptr com =
             boost::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
+    com->setLambda(0.1);
 
     OpenSoT::tasks::velocity::Postural::Ptr postural =
             boost::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
+    postural->setLambda(0.1);
 
+    double dt = 0.001;
+    if(is_ros_running)
+        rate = std::make_shared<ros::Rate>(1./dt);
     OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
-            boost::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(M_PI_2, 0.01, this->q.size());
+            boost::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(M_PI, dt, this->q.size());
+
+    OpenSoT::tasks::velocity::Cartesian::Ptr l_arm =
+            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_arm", this->q, *(this->_model), "LSoftHand", "torso");
+
+    OpenSoT::tasks::velocity::Cartesian::Ptr r_arm =
+            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_arm", this->q, *(this->_model), "RSoftHand", "torso");
 
 
+    Eigen::VectorXd qmin, qmax;
+    this->_model->getJointLimits(qmin, qmax);
+    OpenSoT::constraints::velocity::JointLimits::Ptr joint_lims =
+            boost::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
+
+
+    this->vs_task->setLambda(0.1);
+
+    std::list<unsigned int> id = {0,1};
     OpenSoT::AutoStack::Ptr stack = ((l_sole + r_sole)/
-                                    (com + this->vs_task)/
-                                    (postural))<<vel_lims;
+                                    (com%id + 10.*this->vs_task + l_arm + r_arm)/
+                                    (postural))<<vel_lims<<joint_lims;
 
+    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e7);
+
+    this->desired_features.clear();
+    for(unsigned int i = 0; i < 4; ++i)
+    {
+        this->desired_features.push_back(new vpFeaturePoint());
+        this->desired_features.back()-> buildFrom(3*i-0.1, (3*i+1)+0.1, (3*i+2));
+        this->desired_features.back()->print();
+    }
+
+    auto feature_list = toGenericFeature<vpFeaturePoint>(this->desired_features);
+    EXPECT_TRUE(this->vs_task->setDesiredFeatures(feature_list));
+
+    stack->update(this->q);
+
+    Eigen::VectorXd q, dq, ds;
+    q = this->q;
+    dq.setZero(q.size());
+
+    if(is_ros_running)
+        robot_state_publisher_->publishFixedTransforms("", true);
+
+    for(unsigned int i = 0; i < 2000; ++i)
+    {
+        //1. Models update
+        q += dq;
+        ds = this->vs_task->getA() * dq;
+
+        double x, x_new, y, y_new;
+        int j = 0;
+        for(auto point_feature : this->point_features)
+        {
+            x = point_feature->get_x();
+            y = point_feature->get_y();
+
+            x_new = x + ds[2*j];
+            y_new = y + ds[2*j+1];
+
+            point_feature->set_x(x_new);
+            point_feature->set_y(y_new);
+            point_feature->set_Z(1);
+
+            j++;
+        }
+
+        auto features = toGenericFeature<vpFeaturePoint>(this->point_features);
+        EXPECT_TRUE(this->vs_task->setFeatures(features));
+        this->_model->setJointPosition(q);
+        this->_model->update();
+
+        if(is_ros_running)
+            publishRobotModel(robot_state_publisher_.get(), world_broadcaster.get(), this->_model.get());
+
+
+        //2. stack update
+        Eigen::MatrixXd B;
+        this->_model->getInertiaMatrix(B);
+        postural->setWeight(B);
+
+        stack->update(q);
+
+        //3. solve
+        EXPECT_TRUE(solver->solve(dq));
+
+
+        //4. Check contact kept
+        EXPECT_LE(l_sole->getb().norm(), 1e-3);
+        EXPECT_LE(r_sole->getb().norm(), 1e-3);
+
+        if(is_ros_running)
+            rate->sleep();
+
+    }
+
+
+    //5. check visual servoing convergence
+    EXPECT_LE(this->vs_task->getb().norm(), 1e-3);
+    std::cout<<"visual servoing b.norm(): "<<this->vs_task->getb().norm()<<std::endl;
 
     logger->flush();
 }

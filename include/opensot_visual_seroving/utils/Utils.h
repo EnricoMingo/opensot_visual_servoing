@@ -4,6 +4,8 @@
 #include <Eigen/Core>
 #include <visp/vpMatrix.h>
 #include <visp/vpColVector.h>
+#include <visp/vpBasicFeature.h>
+#include <list>
 
 template<typename Derived>
 /**
@@ -39,5 +41,19 @@ void eigen2visp(const Eigen::VectorXd &src, vpColVector &dst)
         dst[static_cast<unsigned int>(i)] = src(i);
     }
 }
+
+template<typename FeatureType>
+/**
+ * @brief toGenericFeature
+ * @param feature_list
+ * @return
+ */
+std::list<vpBasicFeature*> toGenericFeature(const std::list<FeatureType*>& feature_list)
+{
+    std::list<vpBasicFeature *> generic_features(std::begin(feature_list), std::end(feature_list));
+    return generic_features;
+}
+
+
 
 #endif
