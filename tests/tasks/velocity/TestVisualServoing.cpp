@@ -817,7 +817,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
             boost::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
 
 
-    this->vs_task->setLambda(0.1);
+    this->vs_task->setLambda(0.001);
 
     std::list<unsigned int> id = {0,1};
     OpenSoT::AutoStack::Ptr stack = ((l_sole + r_sole)/
@@ -826,6 +826,49 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
     OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e7);
 
+    
+    // Get the camera pose
+    Eigen::Affine3d T;
+    this->_model->getPose(camera_frame, T); 
+    //std::cout << "T: " << T.matrix() << std::endl;
+    vpHomogeneousMatrix wMt;
+    eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMt);
+    vpHomogeneousMatrix M1(0, 0, 0, 0, vpMath::rad(90), 0);
+    vpHomogeneousMatrix M2(0, 0, 0, 0, 0, vpMath::rad(-90));
+    vpHomogeneousMatrix tMc = M1 * M2;
+    std::cout << "tMc: " << tMc << std::endl;
+    vpHomogeneousMatrix wMc = wMt * tMc;
+    
+    vpHomogeneousMatrix cMo(0, 0, 0.1, 0, 0, 0);
+    vpHomogeneousMatrix cdMo(0, 0.0, 0.12, 0, 0, 0);
+    //vpHomogeneousMatrix cdMo(0.0, 0, 0.12, 0, 0, vpMath::rad(10));
+    
+    /// Object frame initial pose
+    vpHomogeneousMatrix wMo = wMc * cMo;
+    
+    /// Define the visual pattern: 4 points at the verteces of a square around the object frame  
+    vpPoint point[4];
+    point[0].setWorldCoordinates(-0.1, -0.1, 0);
+    point[1].setWorldCoordinates(0.1, -0.1, 0);
+    point[2].setWorldCoordinates(0.1, 0.1, 0);
+    point[3].setWorldCoordinates(-0.1, 0.1, 0);
+
+    /// Define the current and desired visual features 
+    /// (projecting the points with the current and desired camera pose)
+    vpFeaturePoint p[4], pd[4];
+    this->vs_task->clearFeatures();
+    for (unsigned int i = 0; i < 4; i++) {
+      point[i].track(cdMo);
+      vpFeatureBuilder::create(pd[i], point[i]);
+      point[i].track(cMo);
+      vpFeatureBuilder::create(p[i], point[i]);
+      this->vs_task->addFeature(p[i], pd[i]);
+    }
+
+    // Not sure I need this 
+    this->vs_task->update(this->q);
+    
+    /*
     this->desired_features.clear();
     for(unsigned int i = 0; i < 4; ++i)
     {
@@ -836,6 +879,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
     auto feature_list = toGenericFeature<vpFeaturePoint>(this->desired_features);
     EXPECT_TRUE(this->vs_task->setDesiredFeatures(feature_list));
+    */
 
     stack->update(this->q);
 
@@ -848,10 +892,26 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
     for(unsigned int i = 0; i < 2000; ++i)
     {
+        this->vs_task->log(logger);
+
         //1. Models update
         q += dq;
-        ds = this->vs_task->getA() * dq;
+        //ds = this->vs_task->getA() * dq;
 
+        this->_model->getPose(camera_frame, T); 
+        eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMt);
+        wMc = wMt * tMc;
+        cMo = wMc.inverse() * wMo;
+        
+        this->vs_task->clearFeatures();
+        for (unsigned int i = 0; i < 4; i++) {
+            point[i].track(cMo);
+            vpFeatureBuilder::create(p[i], point[i]);
+            this->vs_task->addFeature(p[i], pd[i]);
+        }
+        this->vs_task->update(this->q);
+        
+        /*
         double x, x_new, y, y_new;
         int j = 0;
         for(auto point_feature : this->point_features)
@@ -871,6 +931,8 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
         auto features = toGenericFeature<vpFeaturePoint>(this->point_features);
         EXPECT_TRUE(this->vs_task->setFeatures(features));
+        */
+
         this->_model->setJointPosition(q);
         this->_model->update();
 
