@@ -831,16 +831,16 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     Eigen::Affine3d T;
     this->_model->getPose(camera_frame, T); 
     //std::cout << "T: " << T.matrix() << std::endl;
-    vpHomogeneousMatrix wMt;
-    eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMt);
-    vpHomogeneousMatrix M1(0, 0, 0, 0, vpMath::rad(90), 0);
-    vpHomogeneousMatrix M2(0, 0, 0, 0, 0, vpMath::rad(-90));
-    vpHomogeneousMatrix tMc = M1 * M2;
-    std::cout << "tMc: " << tMc << std::endl;
-    vpHomogeneousMatrix wMc = wMt * tMc;
+    vpHomogeneousMatrix wMt, wMc;
+    eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
+    //vpHomogeneousMatrix M1(0, 0, 0, 0, vpMath::rad(90), 0);
+    //pHomogeneousMatrix M2(0, 0, 0, 0, 0, vpMath::rad(-90));
+    //vpHomogeneousMatrix tMc = M1 * M2;
+    //std::cout << "tMc: " << tMc << std::endl;
+    //vpHomogeneousMatrix wMc = wMt * tMc;
     
     vpHomogeneousMatrix cMo(0, 0, 0.1, 0, 0, 0);
-    vpHomogeneousMatrix cdMo(0, 0.0, 0.12, 0, 0, 0);
+    vpHomogeneousMatrix cdMo(0, 0.0, 0.25, 0, 0, vpMath::rad(45));
     //vpHomogeneousMatrix cdMo(0.0, 0, 0.12, 0, 0, vpMath::rad(10));
     
     /// Object frame initial pose
@@ -890,7 +890,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     if(is_ros_running)
         robot_state_publisher_->publishFixedTransforms("", true);
 
-    for(unsigned int i = 0; i < 2000; ++i)
+    for(unsigned int i = 0; i < 5000; ++i)
     {
         this->vs_task->log(logger);
 
@@ -899,8 +899,8 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
         //ds = this->vs_task->getA() * dq;
 
         this->_model->getPose(camera_frame, T); 
-        eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMt);
-        wMc = wMt * tMc;
+        eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
+        //wMc = wMt * tMc;
         cMo = wMc.inverse() * wMo;
         
         this->vs_task->clearFeatures();
