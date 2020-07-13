@@ -30,6 +30,16 @@ void visp2eigen(const vpColVector& src, Eigen::MatrixBase<Derived> &dst)
 }
 
 template<typename Derived>
+void eigen2visp(const Eigen::MatrixXd &src, vpHomogeneousMatrix &dst)
+{
+    if (src.rows() != 4 || src.cols() != 4) {
+        throw vpException(vpException::dimensionError, "Input Eigen Matrix must be of size (4,4)!");
+}
+
+Eigen::Map<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor> >(&dst.data[0], src.rows(), src.cols()) = src;
+}
+
+template<typename Derived>
 void eigen2visp(const Eigen::VectorXd &src, vpColVector &dst)
 {
     dst.resize(static_cast<unsigned int>(src.rows()));
