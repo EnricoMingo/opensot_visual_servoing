@@ -962,17 +962,9 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
 
     //5. check visual servoing convergence
+    EXPECT_LE(this->vs_task->getFeaturesError().norm(), 1e-3);
     
-    // Get the VS error
-    vpColVector error;
-    for(unsigned int k = 0; k < 4; ++k)
-        error.stack( p[k].error(pd[k]));
-    Eigen::MatrixXd vs_error;
-    visp2eigen<Eigen::MatrixXd>(error, vs_error);
-
-    EXPECT_LE(vs_error.norm(), 1e-3);
-    
-    std::cout<<"visual servoing error norm: "<<vs_error.norm()<<std::endl;
+    std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;
 
     logger->flush();   
 }

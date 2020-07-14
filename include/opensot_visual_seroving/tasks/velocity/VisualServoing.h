@@ -161,6 +161,13 @@ namespace OpenSoT {
 
             friend VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
 
+            /**
+             * @brief getFeaturesError
+             * @return vector of feature errors computed as (sd- s)
+             * NOTE: be sure to call update() first
+             */
+            const Eigen::VectorXd& getFeaturesError() const;
+
        private:
             /**
              * @brief _update
@@ -172,6 +179,11 @@ namespace OpenSoT {
              * @brief compute_b
              */
             void compute_b();
+
+            /**
+             * @brief _features_error
+             */
+            Eigen::VectorXd _features_error;
 
             /**
              * @brief _J stores temporary Jacobian from Cartesian task

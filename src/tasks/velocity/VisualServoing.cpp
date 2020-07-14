@@ -257,6 +257,7 @@ bool VisualServoing::isEyeToHand()
 void VisualServoing::compute_b()
 {
     _b.resize(_L.rows());
+    _features_error.resize(_L.rows());
     std::list<vpBasicFeature*>::iterator desired_feature = _desiredFeatureList.begin();
     std::list<unsigned int>::iterator selection = _featureSelectionList.begin();
     unsigned int i = 0;
@@ -264,11 +265,12 @@ void VisualServoing::compute_b()
     {
         Eigen::VectorXd tmp;
         visp2eigen<Eigen::VectorXd>(feature->error(*(*desired_feature), *selection), tmp);
-        _b.segment(i, tmp.size()) << -_lambda*tmp;
+        _features_error.segment(i, tmp.size()) << -tmp;
         i += tmp.size();
         desired_feature++;
         selection++;
     }
+    _b = _lambda*_features_error;
 }
 
 bool VisualServoing::setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list)
@@ -329,6 +331,11 @@ void VisualServoing::_log(XBot::MatLogger::Ptr logger)
         }
     }
 
+}
+
+const Eigen::VectorXd& VisualServoing::getFeaturesError() const
+{
+    return _features_error;
 }
 
 VisualServoing::Ptr OpenSoT::tasks::velocity::operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices)
