@@ -840,7 +840,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     //vpHomogeneousMatrix wMc = wMt * tMc;
     
     vpHomogeneousMatrix cMo(0, 0, 0.1, 0, 0, 0);
-    vpHomogeneousMatrix cdMo(0, 0.0, 0.25, 0, 0, vpMath::rad(45));
+    vpHomogeneousMatrix cdMo(0, 0, 0.25, 0, 0, vpMath::rad(45));
     //vpHomogeneousMatrix cdMo(0.0, 0, 0.12, 0, 0, vpMath::rad(10));
     
     /// Object frame initial pose
@@ -890,7 +890,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     if(is_ros_running)
         robot_state_publisher_->publishFixedTransforms("", true);
 
-    for(unsigned int i = 0; i < 5000; ++i)
+    for(unsigned int i = 0; i < 8000; ++i)
     {
         this->vs_task->log(logger);
 
@@ -962,10 +962,19 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
 
     //5. check visual servoing convergence
-    EXPECT_LE(this->vs_task->getb().norm(), 1e-3);
-    std::cout<<"visual servoing b.norm(): "<<this->vs_task->getb().norm()<<std::endl;
+    
+    // Get the VS error
+    vpColVector error;
+    for(unsigned int k = 0; k < 4; ++k)
+        error.stack( p[k].error(pd[k]));
+    Eigen::MatrixXd vs_error;
+    visp2eigen<Eigen::MatrixXd>(error, vs_error);
 
-    logger->flush();
+    EXPECT_LE(vs_error.norm(), 1e-3);
+    
+    std::cout<<"visual servoing error norm: "<<vs_error.norm()<<std::endl;
+
+    logger->flush();   
 }
 
 
