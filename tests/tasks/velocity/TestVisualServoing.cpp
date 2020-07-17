@@ -925,7 +925,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     if(is_ros_running)
         robot_state_publisher_->publishFixedTransforms("", true);
 
-    for(unsigned int i = 0; i < 8000; ++i)
+    for(unsigned int i = 0; i < 10000; ++i)
     {
         this->vs_task->log(logger);
 
@@ -1048,11 +1048,10 @@ TEST_F(testVisualServoingTask, testVSAM)
 
     OpenSoT::tasks::velocity::Postural::Ptr postural =
             boost::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
-    postural->setLambda(0.01);
+    postural->setLambda(0.1);
     Eigen::MatrixXd W = postural->getWeight();
-    std::cout<<"W: "<<W<<std::endl;
-    Eigen::Matrix6d W6; W6.setZero();
-    W.block(0, 0, 6 ,6) = W6;
+    for(unsigned int i = 0; i < 6; ++i)
+        W(i,i) = 0.0;
     W(this->_model->getDofIndex("WaistYaw"),this->_model->getDofIndex("WaistYaw")) = 100.;
     postural->setWeight(W);
 
@@ -1063,6 +1062,7 @@ TEST_F(testVisualServoingTask, testVSAM)
         rate = std::make_shared<ros::Rate>(1./dt);
     Eigen::VectorXd qdotlims;
     this->_model->getVelocityLimits(qdotlims);
+    std::cout<<"dq lims: "<<qdotlims.transpose()<<std::endl;
     OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
             boost::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(qdotlims, dt);
 
@@ -1072,14 +1072,14 @@ TEST_F(testVisualServoingTask, testVSAM)
             boost::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
 
 
-    this->vs_task->setLambda(0.005);
+    this->vs_task->setLambda(0.01);
 
-    std::list<unsigned int> id = {5};
-    OpenSoT::AutoStack::Ptr stack = ((com + mom)/
-                                    (this->vs_task))<<vel_lims<<joint_lims;
+    OpenSoT::AutoStack::Ptr stack;
+    stack = ((com + mom)/
+                                    (this->vs_task)/(postural))<<vel_lims<<joint_lims;
 
-//                                    (postural))
-    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e3, OpenSoT::solvers::solver_back_ends::qpOASES);
+
+    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e9, OpenSoT::solvers::solver_back_ends::qpOASES);
 
 
     // Get the camera pose
@@ -1089,8 +1089,8 @@ TEST_F(testVisualServoingTask, testVSAM)
     vpHomogeneousMatrix wMt, wMc;
     eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
 
-    vpHomogeneousMatrix cMo(0, 0, 0.1, 0, 0, 0);
-    vpHomogeneousMatrix cdMo(0, 0, 0.1, 0, 0, vpMath::rad(90));
+    vpHomogeneousMatrix cMo(0, 0, .0005, 0, 0, 0);
+    vpHomogeneousMatrix cdMo(0, 0, .0005, 0, 0, vpMath::rad(120));
     //vpHomogeneousMatrix cdMo(0.0, 0, 0.12, 0, 0, vpMath::rad(10));
 
     /// Object frame initial pose
@@ -1115,9 +1115,6 @@ TEST_F(testVisualServoingTask, testVSAM)
       this->vs_task->addFeature(p[i], pd[i]);
     }
 
-    // Not sure I need this
-    this->vs_task->update(this->q);
-
     stack->update(this->q);
 
     Eigen::VectorXd q, dq;
@@ -1141,12 +1138,15 @@ TEST_F(testVisualServoingTask, testVSAM)
         eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
         cMo = wMc.inverse() * wMo;
 
+
+
         this->vs_task->clearFeatures();
         for (unsigned int i = 0; i < 4; i++) {
             point[i].track(cMo);
             vpFeatureBuilder::create(p[i], point[i]);
             this->vs_task->addFeature(p[i], pd[i]);
         }
+
 
 
         if(is_ros_running)
