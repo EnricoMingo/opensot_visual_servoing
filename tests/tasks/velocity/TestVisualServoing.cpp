@@ -26,6 +26,8 @@
 
 #include <tf/transform_broadcaster.h>
 
+#include <OpenSoT/tasks/velocity/AngularMomentum.h>
+
 namespace{
 
 class testVisualServoingTask: public ::testing::Test
@@ -100,6 +102,39 @@ protected:
         q[_model->getDofIndex("RShLat")] = -20.0*M_PI/180.0;
         q[_model->getDofIndex("RShYaw")] = 15.0*M_PI/180.0;
         q[_model->getDofIndex("RElbj")] = -80.0*M_PI/180.0;
+
+    }
+
+    void setHomingPositionVSAM() {
+        q[_model->getDofIndex("WaistLat")] =  0.0;
+        q[_model->getDofIndex("WaistSag")] =  0.0;
+        q[_model->getDofIndex("WaistYaw")] =  0.0;
+        q[_model->getDofIndex("RShSag")] =  0.7047622086892001;
+        q[_model->getDofIndex("RShLat")] =  -0.5677635252336075;
+        q[_model->getDofIndex("RShYaw")] =  0.2890564140758947;
+        q[_model->getDofIndex("RElbj")] =  -1.6532190021255193;
+        q[_model->getDofIndex("RForearmPlate")] =  -0.0003280309196516731;
+        q[_model->getDofIndex("RWrj1")] =  -0.008641640605188954;
+        q[_model->getDofIndex("RWrj2")] =  -0.0013920145156089084;
+        q[_model->getDofIndex("LShSag")] =  0.5545755010440612;
+        q[_model->getDofIndex("LShLat")] =  0.6179429857281579;
+        q[_model->getDofIndex("LShYaw")] =  -0.2412515368003296;
+        q[_model->getDofIndex("LElbj")] =  -1.7123663089414456;
+        q[_model->getDofIndex("LForearmPlate")] =  -0.0007051899703876909;
+        q[_model->getDofIndex("LWrj1")] =  -0.013205282554514752;
+        q[_model->getDofIndex("LWrj2")] =  0.0037545474284079597;
+        q[_model->getDofIndex("RHipLat")] =  -0.73156157875935218;
+        q[_model->getDofIndex("RHipYaw")] =  0.;
+        q[_model->getDofIndex("RHipSag")] =  -0.1636185715937876;
+        q[_model->getDofIndex("RKneeSag")] =  1.1413767149293743;
+        q[_model->getDofIndex("RAnkSag")] =  -0.4421027118276261;
+        q[_model->getDofIndex("RAnkLat")] =  0.004101490304317014;
+        q[_model->getDofIndex("LHipLat")] =  0.73156157875935218;
+        q[_model->getDofIndex("LHipYaw")] =  0.;
+        q[_model->getDofIndex("LHipSag")] =  -0.1636185715937876;
+        q[_model->getDofIndex("LKneeSag")] =  0.8076545504729606;
+        q[_model->getDofIndex("LAnkSag")] =  -0.4695127574050335;
+        q[_model->getDofIndex("LAnkLat")] =  0.0012525979207698662;
 
     }
 
@@ -898,6 +933,9 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
         q += dq;
         //ds = this->vs_task->getA() * dq;
 
+        this->_model->setJointPosition(q);
+        this->_model->update();
+
         this->_model->getPose(camera_frame, T); 
         eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
         //wMc = wMt * tMc;
@@ -933,8 +971,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
         EXPECT_TRUE(this->vs_task->setFeatures(features));
         */
 
-        this->_model->setJointPosition(q);
-        this->_model->update();
+
 
         if(is_ros_running)
             publishRobotModel(robot_state_publisher_.get(), world_broadcaster.get(), this->_model.get());
@@ -967,6 +1004,178 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;
 
     logger->flush();   
+}
+
+TEST_F(testVisualServoingTask, testVSAM)
+{
+    this->setHomingPositionVSAM();
+    this->_model->setJointPosition(this->q);
+    this->_model->update();
+
+
+    ///ROS RELATED PART:
+    int argc = 0;
+    char* argv[1] = {""};
+    ros::init(argc, argv, "testVSAM");
+    bool is_ros_running = ros::master::check();
+
+    std::shared_ptr<ros::NodeHandle> nh;
+    KDL::Tree tree;
+    std::shared_ptr<robot_state_publisher::RobotStatePublisher> robot_state_publisher_;
+    std::shared_ptr<tf::TransformBroadcaster> world_broadcaster;
+    std::shared_ptr<ros::Rate> rate;
+    if(is_ros_running)
+    {
+        nh = std::make_shared<ros::NodeHandle>();
+        nh->setParam("robot_description", this->_model->getUrdfString());
+        if(!kdl_parser::treeFromUrdfModel(_model->getUrdf(), tree))
+            ROS_ERROR("Failed to construct kdl tree");
+        robot_state_publisher_ = std::make_shared<robot_state_publisher::RobotStatePublisher>(tree);
+        world_broadcaster = std::make_shared<tf::TransformBroadcaster>();
+    }
+    ///
+
+    XBot::MatLogger::Ptr logger;
+    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testVSAM");
+
+    OpenSoT::tasks::velocity::CoM::Ptr com =
+            boost::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
+    com->setLambda(0.);
+
+    OpenSoT::tasks::velocity::AngularMomentum::Ptr mom =
+            boost::make_shared<OpenSoT::tasks::velocity::AngularMomentum>(this->q, *(this->_model));
+
+
+    OpenSoT::tasks::velocity::Postural::Ptr postural =
+            boost::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
+    postural->setLambda(0.01);
+    Eigen::MatrixXd W = postural->getWeight();
+    std::cout<<"W: "<<W<<std::endl;
+    Eigen::Matrix6d W6; W6.setZero();
+    W.block(0, 0, 6 ,6) = W6;
+    W(this->_model->getDofIndex("WaistYaw"),this->_model->getDofIndex("WaistYaw")) = 100.;
+    postural->setWeight(W);
+
+
+
+    double dt = 0.01;
+    if(is_ros_running)
+        rate = std::make_shared<ros::Rate>(1./dt);
+    Eigen::VectorXd qdotlims;
+    this->_model->getVelocityLimits(qdotlims);
+    OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
+            boost::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(qdotlims, dt);
+
+    Eigen::VectorXd qmin, qmax;
+    this->_model->getJointLimits(qmin, qmax);
+    OpenSoT::constraints::velocity::JointLimits::Ptr joint_lims =
+            boost::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
+
+
+    this->vs_task->setLambda(0.005);
+
+    std::list<unsigned int> id = {5};
+    OpenSoT::AutoStack::Ptr stack = ((com + mom)/
+                                    (this->vs_task))<<vel_lims<<joint_lims;
+
+//                                    (postural))
+    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e3, OpenSoT::solvers::solver_back_ends::qpOASES);
+
+
+    // Get the camera pose
+    Eigen::Affine3d T;
+    this->_model->getPose(camera_frame, T);
+    //std::cout << "T: " << T.matrix() << std::endl;
+    vpHomogeneousMatrix wMt, wMc;
+    eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
+
+    vpHomogeneousMatrix cMo(0, 0, 0.1, 0, 0, 0);
+    vpHomogeneousMatrix cdMo(0, 0, 0.1, 0, 0, vpMath::rad(90));
+    //vpHomogeneousMatrix cdMo(0.0, 0, 0.12, 0, 0, vpMath::rad(10));
+
+    /// Object frame initial pose
+    vpHomogeneousMatrix wMo = wMc * cMo;
+
+    /// Define the visual pattern: 4 points at the verteces of a square around the object frame
+    vpPoint point[4];
+    point[0].setWorldCoordinates(-0.1, -0.1, 0);
+    point[1].setWorldCoordinates(0.1, -0.1, 0);
+    point[2].setWorldCoordinates(0.1, 0.1, 0);
+    point[3].setWorldCoordinates(-0.1, 0.1, 0);
+
+    /// Define the current and desired visual features
+    /// (projecting the points with the current and desired camera pose)
+    vpFeaturePoint p[4], pd[4];
+    this->vs_task->clearFeatures();
+    for (unsigned int i = 0; i < 4; i++) {
+      point[i].track(cdMo);
+      vpFeatureBuilder::create(pd[i], point[i]);
+      point[i].track(cMo);
+      vpFeatureBuilder::create(p[i], point[i]);
+      this->vs_task->addFeature(p[i], pd[i]);
+    }
+
+    // Not sure I need this
+    this->vs_task->update(this->q);
+
+    stack->update(this->q);
+
+    Eigen::VectorXd q, dq;
+    q = this->q;
+    dq.setZero(q.size());
+
+    if(is_ros_running)
+        robot_state_publisher_->publishFixedTransforms("", true);
+
+    for(unsigned int i = 0; i < 1500; ++i)
+    {
+        this->vs_task->log(logger);
+
+        //1. Models update
+        q += dq;
+
+        this->_model->setJointPosition(q);
+        this->_model->update();
+
+        this->_model->getPose(camera_frame, T);
+        eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
+        cMo = wMc.inverse() * wMo;
+
+        this->vs_task->clearFeatures();
+        for (unsigned int i = 0; i < 4; i++) {
+            point[i].track(cMo);
+            vpFeatureBuilder::create(p[i], point[i]);
+            this->vs_task->addFeature(p[i], pd[i]);
+        }
+
+
+        if(is_ros_running)
+            publishRobotModel(robot_state_publisher_.get(), world_broadcaster.get(), this->_model.get());
+
+
+        //2. stack update
+        stack->update(q);
+
+        //3. solve
+        EXPECT_TRUE(solver->solve(dq));
+
+
+        //4. Check contact kept
+        EXPECT_LE((com->getA()*dq - com->getb()).norm(), 1e-3);
+        EXPECT_LE((mom->getA()*dq - mom->getb()).norm(), 1e-3);
+
+        if(is_ros_running)
+            rate->sleep();
+
+    }
+
+
+    //5. check visual servoing convergence
+    EXPECT_LE(this->vs_task->getFeaturesError().norm(), 1e-3);
+
+    std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;
+
+    logger->flush();
 }
 
 
