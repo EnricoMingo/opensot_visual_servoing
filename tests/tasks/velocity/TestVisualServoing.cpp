@@ -1055,8 +1055,6 @@ TEST_F(testVisualServoingTask, testVSAM)
     W(this->_model->getDofIndex("WaistYaw"),this->_model->getDofIndex("WaistYaw")) = 100.;
     postural->setWeight(W);
 
-
-
     double dt = 0.01;
     if(is_ros_running)
         rate = std::make_shared<ros::Rate>(1./dt);
@@ -1071,16 +1069,13 @@ TEST_F(testVisualServoingTask, testVSAM)
     OpenSoT::constraints::velocity::JointLimits::Ptr joint_lims =
             boost::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
 
-
-    this->vs_task->setLambda(0.01);
+    this->vs_task->setLambda(0.001);
 
     OpenSoT::AutoStack::Ptr stack;
     stack = ((com + mom)/
-                                    (this->vs_task)/(postural))<<vel_lims<<joint_lims;
-
+            (this->vs_task)/(postural))<<vel_lims<<joint_lims;
 
     OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e9, OpenSoT::solvers::solver_back_ends::qpOASES);
-
 
     // Get the camera pose
     Eigen::Affine3d T;
@@ -1089,8 +1084,8 @@ TEST_F(testVisualServoingTask, testVSAM)
     vpHomogeneousMatrix wMt, wMc;
     eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
 
-    vpHomogeneousMatrix cMo(0, 0, .0005, 0, 0, 0);
-    vpHomogeneousMatrix cdMo(0, 0, .0005, 0, 0, vpMath::rad(120));
+    vpHomogeneousMatrix cMo(0, 0, .15, 0, 0, 0);
+    vpHomogeneousMatrix cdMo(0, 0, .15, 0, 0, vpMath::rad(90));
     //vpHomogeneousMatrix cdMo(0.0, 0, 0.12, 0, 0, vpMath::rad(10));
 
     /// Object frame initial pose
@@ -1138,8 +1133,6 @@ TEST_F(testVisualServoingTask, testVSAM)
         eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
         cMo = wMc.inverse() * wMo;
 
-
-
         this->vs_task->clearFeatures();
         for (unsigned int i = 0; i < 4; i++) {
             point[i].track(cMo);
@@ -1147,18 +1140,14 @@ TEST_F(testVisualServoingTask, testVSAM)
             this->vs_task->addFeature(p[i], pd[i]);
         }
 
-
-
         if(is_ros_running)
             publishRobotModel(robot_state_publisher_.get(), world_broadcaster.get(), this->_model.get());
-
 
         //2. stack update
         stack->update(q);
 
         //3. solve
         EXPECT_TRUE(solver->solve(dq));
-
 
         //4. Check contact kept
         EXPECT_LE((com->getA()*dq - com->getb()).norm(), 1e-3);
@@ -1169,7 +1158,6 @@ TEST_F(testVisualServoingTask, testVSAM)
 
     }
 
-
     //5. check visual servoing convergence
     EXPECT_LE(this->vs_task->getFeaturesError().norm(), 1e-3);
 
@@ -1177,7 +1165,6 @@ TEST_F(testVisualServoingTask, testVSAM)
 
     logger->flush();
 }
-
 
 }
 
