@@ -93,27 +93,23 @@ class points_extraction(features_extraction):
                     (angles[2], (xx[2],yy[2]), rr[2]),
                     (angles[3], (xx[3],yy[3]), rr[3])],
                     dtype=[('angle','f4'), ('center',np.float64, (2,)), ('ray','f4')])
-
-            #Sort the points counter-clockwise
-            self.blobs = np.sort(self.blobs,None,'quicksort','angle') 
-                
-            '''
-            # If you lost the detection at the previous iteration, sort the blob by the angle
-            if not self.track:
-                #Sort the points counter-clockwise
-                self.blobs = np.sort(self.blobs,None,'quicksort','angle') 
-                self.blobs_old = self.blobs
-                self.blobs_aux = self.blobs
-            # If you did not loose the detection, track the blobs with the same id than before, decided on the base of the euclidean distance
-            else: 
-                for (i,f) in enumerate(self.blobs):
-                    dist = np.linalg.norm(f['center']-self.blobs_old['center'])#,2,1)
-                    idx = np.argmin(dist)
-                    self.blobs_aux[idx] = f
-                self.blobs = self.blobs_aux
-                self.blobs_old = self.blobs
-            '''
             
+            # If you lost the detection at the previous iteration, sort the blob by the angle
+            # otherwise track the blobs with the same id than before, decided on the base of the euclidean distance
+            if self.track == True:
+                blobs_aux = np.copy(self.blobs)
+                for (i,f) in enumerate(self.blobs):
+                    a = f['center']
+                    b = self.blobs_old['center']
+                    dist = np.linalg.norm(f['center']-self.blobs_old['center'],2,1)
+                    idx = np.argmin(dist)
+                    blobs_aux[idx] = f
+                self.blobs = blobs_aux
+            else:
+                self.blobs = np.sort(self.blobs,None,'quicksort','angle') 
+
+            self.blobs_old = self.blobs
+
             self.track = True
             self.counter_not_tracking = 0
             color_track = (255,50,0)
