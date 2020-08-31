@@ -9,6 +9,7 @@ find_package(cartesian_interface)
 find_package(catkin REQUIRED COMPONENTS cartesian_interface roscpp urdf)
 find_package(OpenSoT REQUIRED)
 find_package(VISP REQUIRED)
+find_package(cartesian_interface REQUIRED)
 
 ###################################
 ## The catkin_package macro generates cmake config files for your package
@@ -44,6 +45,20 @@ install(TARGETS OpenSoTVisualServoingTask
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
+
+
+add_library(CartesioVisualServoing SHARED
+		src/cartesio_support/tasks/velocity/VisualServoing.cpp)
+
+target_link_libraries(CartesioVisualServoing OpenSoTVisualServoingTask ${cartesian_interface_LIBRARIES} ${catkin_LIBRARIES})
+
+install(TARGETS CartesioVisualServoing
+        DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+        RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+        )
+
+
 
 install(DIRECTORY include DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 FILES_MATCHING PATTERN "*.h")

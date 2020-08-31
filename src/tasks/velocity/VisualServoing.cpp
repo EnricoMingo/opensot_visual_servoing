@@ -28,9 +28,14 @@ VisualServoing::VisualServoing(std::string task_id,
 
     _V.setIdentity(); //intialize sensor_frame and camera_frame coincident 
 
-    computeInteractionMatrix(); //Here I am initializing _L
-    _W.setIdentity(_L.rows(),_L.rows()); //initialized
-    _hessianType = HST_SEMIDEF;
+    if(feature_list.size() > 0)
+    {
+        computeInteractionMatrix(); //Here I am initializing _L
+        _W.setIdentity(_L.rows(),_L.rows()); //initialized
+    }
+    else
+        _W.setIdentity(1,1);
+
 
     update(x);
 }
@@ -39,6 +44,8 @@ void VisualServoing::_update(const Eigen::VectorXd &x)
 {
     if(_featureList.size() > 0)
     {
+        _hessianType = HST_SEMIDEF;
+
         //1) computes Cartesian quantities from Cartesian task
         _cartesian_task->update(x);
         _J = _cartesian_task->getA(); //body jacobian
@@ -55,6 +62,7 @@ void VisualServoing::_update(const Eigen::VectorXd &x)
     }
     else
     {
+        _hessianType = HST_ZERO;
         _A.setZero(1,_x_size);
         _b.setZero(1);
     }
