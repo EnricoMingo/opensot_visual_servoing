@@ -30,6 +30,15 @@ namespace XBot {
                 virtual const std::string& getDistalLink() const = 0 ;
                 virtual const std::string& getFeatureType() const = 0;
 
+                virtual void setVelocityTwistMatrix(const Eigen::Matrix6d& V) = 0;
+                virtual void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star,
+                                        unsigned int select = vpBasicFeature::FEATURE_ALL) = 0;
+                virtual bool setFeatures(std::list<vpBasicFeature *>& feature_list,
+                                 std::list<vpBasicFeature *>& desired_feature_list,
+                                 std::list<unsigned int>& feature_selection_list) = 0;
+                virtual bool setFeatures(std::list<vpBasicFeature *>& feature_list) = 0;
+                virtual bool setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list) = 0;
+
         };
 
 
@@ -42,14 +51,27 @@ namespace XBot {
 
                 VisualServoingImpl(YAML::Node node, Context::ConstPtr context);
 
-                const std::string& getBaseLink() const;
-                const std::string& getDistalLink() const;
-                const std::string& getFeatureType() const;
+                const std::string& getBaseLink() const override;
+                const std::string& getDistalLink() const override;
+                const std::string& getFeatureType() const override;
+
+                void setVelocityTwistMatrix(const Eigen::Matrix6d& V) override;
+                void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star,
+                                unsigned int select = vpBasicFeature::FEATURE_ALL) override;
+                bool setFeatures(std::list<vpBasicFeature *>& feature_list,
+                         std::list<vpBasicFeature *>& desired_feature_list,
+                         std::list<unsigned int>& feature_selection_list) override;
+                bool setFeatures(std::list<vpBasicFeature *>& feature_list) override;
+                bool setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list) override;
 
             private:
                 std::string _base_link;
                 std::string _distal_link;
                 std::string _feature_type;
+
+                Eigen::Matrix6d _V;
+                std::list<vpBasicFeature *> _featureList, _desiredFeatureList;
+                std::list<unsigned int> _featureSelectionList;
         };
 
 

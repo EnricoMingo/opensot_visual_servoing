@@ -44,7 +44,38 @@ const std::string& VisualServoingImpl::getFeatureType() const
     return _feature_type;
 }
 
+void VisualServoingImpl::setVelocityTwistMatrix(const Eigen::Matrix6d& V)
+{
+    _V = V;
+}
 
+void VisualServoingImpl::addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, unsigned int select)
+{
+    _featureList.push_back(&s_cur);
+    _desiredFeatureList.push_back(&s_star);
+    _featureSelectionList.push_back(select);
+}
+
+bool VisualServoingImpl::setFeatures(std::list<vpBasicFeature *>& feature_list,
+                                     std::list<vpBasicFeature *>& desired_feature_list,
+                                     std::list<unsigned int>& feature_selection_list)
+{
+    _featureList = feature_list;
+    _desiredFeatureList = desired_feature_list;
+    _featureSelectionList = feature_selection_list;
+}
+
+bool VisualServoingImpl::setFeatures(std::list<vpBasicFeature *>& feature_list)
+{
+    _featureList = feature_list;
+}
+
+bool VisualServoingImpl::setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list)
+{
+    _desiredFeatureList = desired_feature_list;
+}
+
+/** **/
 VisualServoingRos::VisualServoingRos(TaskDescription::Ptr task, RosContext::Ptr context):
     TaskRos(task, context)
 {
