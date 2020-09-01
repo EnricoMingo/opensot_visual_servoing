@@ -34,26 +34,29 @@ VisualServoing::VisualServoing(std::string task_id,
         _W.setIdentity(_L.rows(),_L.rows()); //initialized
     }
     else
-        _W.setIdentity(1,1);
+    {
+        _L.setIdentity(6,6);
+        _W.setIdentity(6,6);
+    }
 
-
+    _hessianType = HST_SEMIDEF;
     update(x);
 }
 
 void VisualServoing::_update(const Eigen::VectorXd &x)
 {
+
+    //1) computes Cartesian quantities from Cartesian task
+    _cartesian_task->update(x);
+    _J = _cartesian_task->getA(); //body jacobian
+
+    //2) computes new Jacobian using the interaction matrix from VISP
+    Eigen::MatrixXd tmp = _J;
+    tmp.noalias() = _V*_J;
+    _A.noalias() = _L*tmp;
+
     if(_featureList.size() > 0)
     {
-        _hessianType = HST_SEMIDEF;
-
-        //1) computes Cartesian quantities from Cartesian task
-        _cartesian_task->update(x);
-        _J = _cartesian_task->getA(); //body jacobian
-
-        //2) computes new Jacobian using the interaction matrix from VISP
-        Eigen::MatrixXd tmp = _J;
-        tmp.noalias() = _V*_J;
-        _A.noalias() = _L*tmp;
         if(!_eye_in_hand)
             _A *= -1.;
 
@@ -62,9 +65,8 @@ void VisualServoing::_update(const Eigen::VectorXd &x)
     }
     else
     {
-        _hessianType = HST_ZERO;
-        _A.setZero(1,_x_size);
-        _b.setZero(1);
+        //3) computes task error
+        _b.setZero(6);
     }
 
 }
