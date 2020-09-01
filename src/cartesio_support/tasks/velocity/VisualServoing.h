@@ -34,6 +34,8 @@ namespace XBot {
                 virtual const std::string& getBaseLink() const = 0;
                 virtual const std::string& getDistalLink() const = 0 ;
                 virtual const std::string& getFeatureType() const = 0;
+                virtual const std::list<vpBasicFeature * >& getFeatures() const = 0;
+                virtual const std::list<vpBasicFeature * >& getDesiredFeatures() const = 0;
 
                 virtual void setVelocityTwistMatrix(const Eigen::Matrix6d& V) = 0;
                 virtual void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star,
@@ -59,6 +61,8 @@ namespace XBot {
                 const std::string& getBaseLink() const override;
                 const std::string& getDistalLink() const override;
                 const std::string& getFeatureType() const override;
+                const std::list<vpBasicFeature * >& getFeatures() const override;
+                const std::list<vpBasicFeature * >& getDesiredFeatures() const override;
 
                 void setVelocityTwistMatrix(const Eigen::Matrix6d& V) override;
                 void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star,
@@ -101,21 +105,6 @@ namespace XBot {
             std::list<vpBasicFeature*> getFeaturesFromMsg(opensot_visual_servoing::VisualFeaturesConstPtr msg);
         };
 
-
-
-        class VisualServoingRosClient : public ClientApi::TaskRos,
-                virtual public VisualServoingTask
-        {
-
-        public:
-
-
-            CARTESIO_DECLARE_SMART_PTR(VisualServoingRosClient)
-
-            VisualServoingRosClient(std::string name, ros::NodeHandle nh);
-
-
-        };
 
 
 

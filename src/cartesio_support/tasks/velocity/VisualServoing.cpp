@@ -44,6 +44,16 @@ const std::string& VisualServoingImpl::getFeatureType() const
     return _feature_type;
 }
 
+const std::list<vpBasicFeature * >& VisualServoingImpl::getFeatures() const
+{
+    return _featureList;
+}
+
+const std::list<vpBasicFeature * >& VisualServoingImpl::getDesiredFeatures() const
+{
+    return _desiredFeatureList;
+}
+
 void VisualServoingImpl::setVelocityTwistMatrix(const Eigen::Matrix6d& V)
 {
     _V = V;
@@ -134,11 +144,6 @@ void VisualServoingRos::run(ros::Time time)
     TaskRos::run(time);
 }
 
-VisualServoingRosClient::VisualServoingRosClient(std::string name, ros::NodeHandle nh):
-    TaskRos(name, nh)
-{
-
-}
 
 OpenSotVisualServoingAdapter::OpenSotVisualServoingAdapter(TaskDescription::Ptr ci_task,
                                          Context::ConstPtr context):
@@ -155,12 +160,10 @@ TaskPtr OpenSotVisualServoingAdapter::constructTask()
     _model->getJointPosition(q);
 
 
-    std::list<vpBasicFeature*> features;
-
+    std::list<vpBasicFeature *> features = _ci_vs->getFeatures();
     std::string id = "visual_servoing_"+_ci_vs->getBaseLink();
     _opensot_vs = boost::make_shared<VSSoT>(id, q, const_cast<ModelInterface&>(*_model),
-                                            _ci_vs->getBaseLink(), _ci_vs->getDistalLink(),
-                                            features);
+                                            _ci_vs->getBaseLink(), _ci_vs->getDistalLink(), features);
 
     return _opensot_vs;
 }
