@@ -1,5 +1,5 @@
 #include "VisualServoing.h"
-#include <visp/vpBasicFeature.h>
+#include <visp/vpFeaturePoint.h>
 
 using namespace XBot::Cartesian::velocity;
 
@@ -68,6 +68,11 @@ bool VisualServoingImpl::setFeatures(std::list<vpBasicFeature *>& feature_list,
 bool VisualServoingImpl::setFeatures(std::list<vpBasicFeature *>& feature_list)
 {
     _featureList = feature_list;
+    if(_featureSelectionList.size() == 0)
+    {
+        for(unsigned int i = 0; i < _featureList.size(); ++i)
+            _featureSelectionList.push_back(vpBasicFeature::FEATURE_ALL);
+    }
 }
 
 bool VisualServoingImpl::setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list)
@@ -76,12 +81,48 @@ bool VisualServoingImpl::setDesiredFeatures(std::list<vpBasicFeature *>& desired
 }
 
 /** **/
+std::list<vpBasicFeature*> VisualServoingRos::getFeaturesFromMsg(opensot_visual_servoing::VisualFeaturesConstPtr msg)
+{
+    std::list<vpBasicFeature *> generic_features;
+    for(unsigned int i = 0; i < msg->features.size(); ++i)
+    {
+        opensot_visual_servoing::VisualFeature f = msg->features[i];
+        if(f.type == opensot_visual_servoing::VisualFeature::POINT)
+        {
+            vpFeaturePoint fp;
+            fp.buildFrom(f.x, f.y, f.Z);
+
+            generic_features.push_back(fp.duplicate());
+        }
+        //else if (f.type == opensot_visual_servoing::VisualFeature::LINE) ...
+    }
+    return generic_features;
+}
+
 VisualServoingRos::VisualServoingRos(TaskDescription::Ptr task, RosContext::Ptr context):
     TaskRos(task, context)
 {
     _ci_vs = std::dynamic_pointer_cast<VisualServoingTask>(task);
     if(!_ci_vs) throw std::runtime_error("Provided task description "
                                             "does not have expected type 'VisualServoingTask'");
+
+    auto on_features_recv = [this](opensot_visual_servoing::VisualFeaturesConstPtr msg)
+    {
+        std::list<vpBasicFeature*> generic_features = getFeaturesFromMsg(msg);
+        _ci_vs->setFeatures(generic_features);
+    };
+
+    _feature_sub = _ctx->nh().subscribe<opensot_visual_servoing::VisualFeatures>(
+                task->getName() + "/features", 10, on_features_recv);
+
+    auto on_desired_features_recv = [this](opensot_visual_servoing::VisualFeaturesConstPtr msg)
+    {
+        std::list<vpBasicFeature*> generic_features = getFeaturesFromMsg(msg);
+        _ci_vs->setDesiredFeatures(generic_features);
+    };
+
+    _desired_feature_sub = _ctx->nh().subscribe<opensot_visual_servoing::VisualFeatures>(
+                task->getName() + "/desired_features", 10, on_desired_features_recv);
 
 
     /* Register type name */

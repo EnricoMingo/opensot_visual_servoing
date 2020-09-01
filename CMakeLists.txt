@@ -6,10 +6,26 @@ add_compile_options(-std=c++11)
 option(COMPILE_TESTS "Compile tests" FALSE)
 
 find_package(cartesian_interface)
-find_package(catkin REQUIRED COMPONENTS cartesian_interface roscpp urdf)
+find_package(catkin REQUIRED COMPONENTS cartesian_interface
+                                        roscpp
+                                        urdf
+                                        rospy
+                                        std_msgs
+                                        message_generation)
 find_package(OpenSoT REQUIRED)
 find_package(VISP REQUIRED)
 find_package(cartesian_interface REQUIRED)
+
+add_message_files(
+   FILES
+   VisualFeature.msg
+   VisualFeatures.msg
+)
+
+generate_messages(
+   DEPENDENCIES
+   std_msgs
+)
 
 ###################################
 ## The catkin_package macro generates cmake config files for your package
@@ -24,6 +40,8 @@ catkin_package(
 
     LIBRARIES
     OpenSoTVisualServoingTask
+
+    CATKIN_DEPENDS message_runtime
 
     )
 

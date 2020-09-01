@@ -8,6 +8,11 @@
 
 #include <opensot_visual_seroving/tasks/velocity/VisualServoing.h>
 
+#include <opensot_visual_servoing/VisualFeatures.h>
+
+#include <visp/vpBasicFeature.h>
+
+
 
 
 using VSSoT = OpenSoT::tasks::velocity::VisualServoing;
@@ -91,6 +96,9 @@ namespace XBot {
         private:
 
             VisualServoingTask::Ptr _ci_vs;
+            ros::Subscriber _feature_sub, _desired_feature_sub;
+
+            std::list<vpBasicFeature*> getFeaturesFromMsg(opensot_visual_servoing::VisualFeaturesConstPtr msg);
         };
 
 
