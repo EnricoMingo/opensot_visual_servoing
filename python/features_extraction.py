@@ -87,7 +87,7 @@ class points_extraction(features_extraction):
             yy4angles = [y - ym for y in yy] #0.5*height_frame 
             angles = np.arctan2(yy4angles,xx4angles)
             
-            #TODO: Fix this with arbitray number of features (not necesserary 4)
+            #TODO: Fix this with arbitray number of features (not necessarily 4)
             self.blobs = np.array([(angles[0], (xx[0],yy[0]), rr[0]),
                     (angles[1], (xx[1],yy[1]), rr[1]),
                     (angles[2], (xx[2],yy[2]), rr[2]),
@@ -99,8 +99,6 @@ class points_extraction(features_extraction):
             if self.track == True:
                 blobs_aux = np.copy(self.blobs)
                 for (i,f) in enumerate(self.blobs):
-                    a = f['center']
-                    b = self.blobs_old['center']
                     dist = np.linalg.norm(f['center']-self.blobs_old['center'],2,1)
                     idx = np.argmin(dist)
                     blobs_aux[idx] = f
