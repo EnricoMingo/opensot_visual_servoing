@@ -172,6 +172,8 @@ bool VisualServoingImpl::setFeatures(std::list<vpBasicFeature *>& feature_list,
     _featureList = feature_list;
     _desiredFeatureList = desired_feature_list;
     _featureSelectionList = feature_selection_list;
+
+    return true;
 }
 
 bool VisualServoingImpl::setFeatures(std::list<vpBasicFeature *>& feature_list)
@@ -182,34 +184,39 @@ bool VisualServoingImpl::setFeatures(std::list<vpBasicFeature *>& feature_list)
         for(unsigned int i = 0; i < _featureList.size(); ++i)
             _featureSelectionList.push_back(vpBasicFeature::FEATURE_ALL);
     }
+    return true;
 }
 
 bool VisualServoingImpl::setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list)
 {
     _desiredFeatureList = desired_feature_list;
+    return true;
 }
 
 /** **/
 std::list<vpBasicFeature*> VisualServoingRos::getFeaturesFromMsg(opensot_visual_servoing::VisualFeaturesConstPtr msg)
 {
     std::list<vpBasicFeature *> generic_features;
+
+    std::list<vpFeaturePoint *> point_features;
     for(unsigned int i = 0; i < msg->features.size(); ++i)
     {
         opensot_visual_servoing::VisualFeature f = msg->features[i];
         if(f.type == opensot_visual_servoing::VisualFeature::POINT)
         {
-            vpFeaturePoint fp;
-            fp.buildFrom(f.x, f.y, f.Z);
-
-            generic_features.push_back(fp.duplicate());
-        }
+            point_features.push_back(new vpFeaturePoint());
+            point_features.back()->buildFrom(f.x, f.y, f.Z);
+         }
         //else if (f.type == opensot_visual_servoing::VisualFeature::LINE) ...
     }
+
+    for(auto pf : point_features)
+        generic_features.push_back(pf);
     return generic_features;
 }
 
 VisualServoingRos::VisualServoingRos(TaskDescription::Ptr task, RosContext::Ptr context):
-    TaskRos(task, context)
+    TaskRos(task, context), _visual_servoing_init(false)
 {
     _ci_vs = std::dynamic_pointer_cast<VisualServoingTask>(task);
     if(!_ci_vs) throw std::runtime_error("Provided task description "
@@ -217,8 +224,20 @@ VisualServoingRos::VisualServoingRos(TaskDescription::Ptr task, RosContext::Ptr 
 
     auto on_features_recv = [this](opensot_visual_servoing::VisualFeaturesConstPtr msg)
     {
+        ///TODO: HERE WE SHOULD STORE A NUMBER OF FEATURES SPECIFIED IN THE CONFIG
         std::list<vpBasicFeature*> generic_features = getFeaturesFromMsg(msg);
-        _ci_vs->setFeatures(generic_features);
+
+        if(!_visual_servoing_init)
+        {
+            std::list<unsigned int> feature_selection_list;
+            for(unsigned int i = 0; i < generic_features.size(); ++i)
+                feature_selection_list.push_back(vpBasicFeature::FEATURE_ALL);
+
+            _ci_vs->setFeatures(generic_features, generic_features, feature_selection_list);
+            _visual_servoing_init = true;
+        }
+        else
+            _ci_vs->setFeatures(generic_features);
     };
 
     _feature_sub = _ctx->nh().subscribe<opensot_visual_servoing::VisualFeatures>(
@@ -228,6 +247,8 @@ VisualServoingRos::VisualServoingRos(TaskDescription::Ptr task, RosContext::Ptr 
     {
         std::list<vpBasicFeature*> generic_features = getFeaturesFromMsg(msg);
         _ci_vs->setDesiredFeatures(generic_features);
+        if(!_visual_servoing_init)
+            _visual_servoing_init = true;
     };
 
     _desired_feature_sub = _ctx->nh().subscribe<opensot_visual_servoing::VisualFeatures>(
@@ -261,7 +282,7 @@ TaskPtr OpenSotVisualServoingAdapter::constructTask()
 
     std::list<vpBasicFeature *> features = _ci_vs->getFeatures();
 
-    std::string id = "visual_servoing_"+_ci_vs->getBaseLink();
+    std::string id = "visual_servoing_"+_ci_vs->getDistalLink();
     _opensot_vs = boost::make_shared<VSSoT>(id, q, const_cast<ModelInterface&>(*_model),
                                             _ci_vs->getBaseLink(), _ci_vs->getDistalLink(), features);
     _opensot_vs->setLambda(_ci_vs->getLambda());
@@ -281,6 +302,7 @@ void OpenSotVisualServoingAdapter::update(double time, double period)
     std::list<vpBasicFeature *> desired_features = _ci_vs->getDesiredFeatures();
     std::list<unsigned int> feature_selection_list = _ci_vs->getFeatureSelectionList();
     _opensot_vs->setFeatures(features, desired_features, feature_selection_list);
+    _opensot_vs->setLambda(_ci_vs->getLambda());
 }
 
 CARTESIO_REGISTER_TASK_PLUGIN(VisualServoingImpl, VisualServoing)

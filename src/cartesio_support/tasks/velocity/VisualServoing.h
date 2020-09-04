@@ -105,6 +105,8 @@ namespace XBot {
             ros::Subscriber _feature_sub, _desired_feature_sub;
 
             std::list<vpBasicFeature*> getFeaturesFromMsg(opensot_visual_servoing::VisualFeaturesConstPtr msg);
+
+            bool _visual_servoing_init;
         };
 
 

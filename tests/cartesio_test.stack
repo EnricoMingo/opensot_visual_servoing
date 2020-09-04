@@ -1,0 +1,51 @@
+solver_options:
+    regularization: 1e-3
+    back_end: "qpoases"
+
+stack:
+    - ["l_sole", "r_sole"]
+    - ["l_arm", "r_arm", "xtion"]
+    - ["Postural"]
+
+constraints: ["JointLimits", "VelocityLimits"]
+
+l_sole:
+    type: "Cartesian"
+    distal_link: "l_sole"
+    lambda: 0.1
+
+r_sole:
+    type: "Cartesian"
+    distal_link: "r_sole"
+    lambda: 0.1
+
+l_arm:
+    type: "Cartesian"
+    distal_link: "LSoftHand"
+    base_link: "Waist"
+    lambda: 0.1
+
+r_arm:
+    type: "Cartesian"
+    distal_link: "RSoftHand"
+    base_link: "Waist"
+    lambda: 0.1
+
+xtion:
+    lib_name: "libCartesioVisualServoing.so"
+    type: "VisualServoing"
+    distal_link: "camera_link"
+    lambda: 0.01
+    feature_type: "vpFeaturePoint"
+    number_of_features: 4
+    
+Postural:
+    type: "Postural"
+    lambda: 0.1
+
+JointLimits:
+    type: "JointLimits"
+
+
+VelocityLimits:
+    type: "VelocityLimits"

@@ -1,0 +1,21 @@
+<launch>
+
+    <arg name="prefix" default=""/>
+    <arg name="gui" default="false"/>
+    
+    <param name="robot_description" 
+        textfile="$(find coman_urdf)/urdf/coman.urdf"/>
+    
+    <param name="robot_description_semantic"
+        textfile="$(find coman_srdf)/srdf/coman.srdf"/>
+    
+    <param name="cartesian/problem_description" 
+        textfile="cartesio_test.stack"/>
+    
+    <include file="$(find cartesian_interface)/launch/cartesio.launch">
+        <arg name="rate" value="100.0"/>
+        <arg name="prefix" value="$(arg prefix)"/>
+    </include>
+
+    
+</launch>

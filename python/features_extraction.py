@@ -22,6 +22,8 @@ class points_extraction(features_extraction):
         
         features_extraction.__init__(self)
 
+        self.blobs = np.array([])
+
         # Vector of the visual features
         self.s = np.array([])
         
@@ -73,6 +75,7 @@ class points_extraction(features_extraction):
 
         # Set-up the detector with default parameters.
         keypoints = self.detector.detect(gray_c)
+
         
         if len(keypoints)==4:
 
