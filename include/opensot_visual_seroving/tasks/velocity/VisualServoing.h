@@ -63,7 +63,9 @@ namespace OpenSoT {
              */
             void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, unsigned int select = vpBasicFeature::FEATURE_ALL);
 
-            /** TO BE COMMENTED **/
+            /**
+             * @brief clearFeatures clears internal lists of features, desired_features and feature_selection
+             */
             void clearFeatures();
             
             /**
@@ -81,6 +83,11 @@ namespace OpenSoT {
                              std::list<unsigned int>& feature_selection_list);
 
 
+            /**
+             * @brief setFeatures
+             * @param feature_list
+             * @return false if feature_list size is different from internal number of features
+             */
             bool setFeatures(std::list<vpBasicFeature *>& feature_list);
 
             /**
