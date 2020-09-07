@@ -126,8 +126,11 @@ class image_processing:
         # Direct conversion to CV2
         np_arr = np.fromstring(ros_data.data, np.uint8)
 
-        #image_np = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
-        image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) # OpenCV >= 3.0:
+        ver = (cv2.__version__).split('.')
+        if int(ver[0]) < 3 :
+            image_np = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
+        else: # OpenCV >= 3.0
+            image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) 
 
         self.feature_extractor(image)
 
