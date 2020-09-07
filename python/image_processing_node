@@ -37,7 +37,7 @@ class image_processing:
 
     def __init__(self):
         
-        # Topics where to publish
+        # Publishers and subscribers
 
         self.bridge = CvBridge()
 
@@ -45,50 +45,39 @@ class image_processing:
         
         self.vis_feat = rospy.Publisher("/image_processing/visual_features", VisualFeatures, queue_size=10, latch=True)
 
-
-        self.sub_once = rospy.Subscriber("/camera_info", CameraInfo, self.cb_once)
+        camera_info_msg = rospy.wait_for_message("/camera_info", CameraInfo, timeout=None)
+        self.get_intrinsic_param(camera_info_msg)
 
         self.subscriber = rospy.Subscriber("/image_raw/compressed", CompressedImage, self.callback_compressed,  queue_size = 1)
 
         self.subscriber = rospy.Subscriber("/image_raw", Image, self.callback, queue_size=1)
 
         # Instantiate the point extraction class
-        self.points_ex = points_extraction()
+        self.points_ex = points_extraction(self.intrinsic)
 
-    def cb_once(self, msg):
-
+    def get_intrinsic_param(self, msg):
+        
         # Extract the camera intrinsic parameters from the matrix K 
         # (Ref.: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/CameraInfo.html)
 
-        print("Received camera info!")
+        print("Got camera info!")
 
-        self.fx = msg.K[0]
-        self.fy = msg.K[4]
-        self.cx = msg.K[2]
-        self.cy = msg.K[5]
+        self.intrinsic = {'fx' : 0, 'fy': 0, 'cx': 0, 'cy' : 0}
+        
+        self.intrinsic['fx'] = msg.K[0]
+        self.intrinsic['fy'] = msg.K[4]
+        self.intrinsic['cx'] = msg.K[2]
+        self.intrinsic['cy'] = msg.K[5]
 
-        self.sub_once.unregister()
+        print(self.intrinsic)
 
     def feature_extractor(self, image):
+
         # Run feature point features extraction algorithm
         self.points_ex.run(image)
 
         # Get the processed image
         image_proc = self.points_ex.get_image()
-
-        # Show the image with openCV
-        if SHOW_OPENCV:
-            cv2.imshow('Robot camera', image_proc)
-
-            key = cv2.waitKey(1)
-
-            self.stop_it = False
-            if key == ord('q'):
-                self.stop_it = True
-                cv2.destroyAllWindows()
-                rospy.signal_shutdown('Quit')
-            if key == ord('r'):
-                self.points_ex.track = False
 
         # Publish the processed image
         self.image_pub.publish(self.bridge.cv2_to_imgmsg(image_proc, "bgr8"))
@@ -104,9 +93,9 @@ class image_processing:
 
         for k in range(0, n_points):
             visualFeature_msg = VisualFeature()
-            visualFeature_msg.x = (s[2 * k] - self.cx) / self.fx
-            visualFeature_msg.y = (s[2 * k + 1] - self.cy) / self.fy
-            visualFeature_msg.Z = 0.5
+            visualFeature_msg.x = (s[2*k]   - self.intrinsic['cx']) / self.intrinsic['fx']
+            visualFeature_msg.y = (s[2*k+1] - self.intrinsic['cy']) / self.intrinsic['fy']
+            visualFeature_msg.Z = 0.5 ############################################################# THIS IS SET LIKE THIS NOW
             visualFeature_msg.type = 0
 
             visualFeatures_msg.features.append(visualFeature_msg)
@@ -115,9 +104,23 @@ class image_processing:
 
         self.vis_feat.publish(visualFeatures_msg)
 
+        # Show the image with openCV
+        if SHOW_OPENCV:
+            cv2.imshow('Robot camera', image_proc)
+
+            key = cv2.waitKey(1)
+
+            self.stop_it = False
+            if key == ord('q'):
+                self.stop_it = True
+                cv2.destroyAllWindows()
+                rospy.signal_shutdown('Quit')
+            if key == ord('r'):
+                self.points_ex.track = False
+
     def callback_compressed(self, ros_data):
 
-        '''Callback function of subscribed topic.'''
+        '''Callback function of CompressedImage topic.'''
         print('received image of type: "%s"' % ros_data.format)
                 
         # Direct conversion to CV2
@@ -130,7 +133,7 @@ class image_processing:
 
     def callback(self, ros_data):
 
-        '''Callback function of subscribed topic.'''
+        '''Callback function of (non-compressed) Image topic.'''
 
         # Direct conversion to CV2
         np_arr = np.fromstring(ros_data.data, np.uint8)
