@@ -103,6 +103,10 @@ namespace XBot {
 
             VisualServoingTask::Ptr _ci_vs;
             ros::Subscriber _feature_sub, _desired_feature_sub;
+            ros::Publisher _reference_features;
+
+            opensot_visual_servoing::VisualFeatures toVisualFeatureMsg(const std::list<vpBasicFeature * >& feature_list,
+                                                                       const std::string& features_type);
 
             std::list<vpBasicFeature*> getFeaturesFromMsg(opensot_visual_servoing::VisualFeaturesConstPtr msg);
 

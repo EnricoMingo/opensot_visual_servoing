@@ -254,14 +254,44 @@ VisualServoingRos::VisualServoingRos(TaskDescription::Ptr task, RosContext::Ptr 
     _desired_feature_sub = _ctx->nh().subscribe<opensot_visual_servoing::VisualFeatures>(
                 task->getName() + "/desired_features", 10, on_desired_features_recv);
 
+    _reference_features = _ctx->nh().advertise<opensot_visual_servoing::VisualFeatures>(
+                task->getName() + "/reference_features", 10, true);
+
 
     /* Register type name */
     registerType("VisualServoing");
 }
 
+opensot_visual_servoing::VisualFeatures
+VisualServoingRos::toVisualFeatureMsg(const std::list<vpBasicFeature * >& feature_list,
+                                     const std::string& features_type)
+{
+    opensot_visual_servoing::VisualFeatures msg;
+    opensot_visual_servoing::VisualFeature feature;
+
+    if(features_type == "vpFeaturePoint")
+    {
+        for(auto f : feature_list)
+        {
+           feature.type = opensot_visual_servoing::VisualFeature::POINT;
+           feature.x = f->get_s()[0];
+           feature.y = f->get_s()[1];
+           feature.Z = 0.; //
+           msg.features.push_back(feature);
+        }
+    }
+
+    msg.header.stamp = ros::Time::now();
+
+    return msg;
+}
+
+
 void VisualServoingRos::run(ros::Time time)
 {
     TaskRos::run(time);
+
+    _reference_features.publish(toVisualFeatureMsg(_ci_vs->getDesiredFeatures(), _ci_vs->getFeatureType()));
 }
 
 

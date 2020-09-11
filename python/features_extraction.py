@@ -81,12 +81,7 @@ class points_extraction(features_extraction):
         self.set_target(dummy_array)
 
     def set_target(self,arr_in):
-
-        n_features = int(0.5*len(arr_in))
-
-        self.target = np.array([])
-        for k in range(0,n_features):
-            self.target = np.append(self.target,np.array([arr_in[2*k],arr_in[2*k+1]]))
+        self.target = arr_in
 
     def run(self, img):
 

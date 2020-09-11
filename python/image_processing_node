@@ -48,12 +48,18 @@ class image_processing:
         camera_info_msg = rospy.wait_for_message("/camera_info", CameraInfo, timeout=None)
         self.get_intrinsic_param(camera_info_msg)
 
-        self.subscriber = rospy.Subscriber("/image_raw/compressed", CompressedImage, self.callback_compressed,  queue_size = 1)
+        self._subscriber = rospy.Subscriber("/image_raw/compressed", CompressedImage, self.callback_compressed,  queue_size = 1)
 
-        self.subscriber = rospy.Subscriber("/image_raw", Image, self.callback, queue_size=1)
+        self._subscriber2 = rospy.Subscriber("/image_raw", Image, self.callback, queue_size=1)
 
+        
         # Instantiate the point extraction class
         self.points_ex = points_extraction(self.intrinsic)
+
+	self._subscriber3 = []
+
+	self._first_publish = True
+
 
     def get_intrinsic_param(self, msg):
         
@@ -70,6 +76,12 @@ class image_processing:
         self.intrinsic['cy'] = msg.K[5]
 
         print(self.intrinsic)
+
+    def callback_desired_features(self, msg):
+	desired_features = np.array([])
+        for feature in msg.features:
+            desired_features = np.append(desired_features, np.array([feature.x*self.intrinsic['fx'] + self.intrinsic['cx'], feature.y*self.intrinsic['fy'] + self.intrinsic['cy']]))
+        self.points_ex.set_target(desired_features)
 
     def feature_extractor(self, image):
 
@@ -103,6 +115,10 @@ class image_processing:
         visualFeatures_msg.header.stamp = rospy.Time.now()
 
         self.vis_feat.publish(visualFeatures_msg)
+
+	if self._first_publish:
+	    self._subscriber3 = rospy.Subscriber("/desired_visual_features", VisualFeatures, self.callback_desired_features, queue_size=1)
+	    self._first_publish = False
 
         # Show the image with openCV
         if SHOW_OPENCV:
