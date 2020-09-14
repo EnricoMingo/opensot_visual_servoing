@@ -93,14 +93,14 @@ class points_extraction(features_extraction):
         # Color detection using HSV color space
         frame_HSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # Hue ranges in [0,179], green is around 40
+        # Hue ranges in [0,179], green is around 60
         low_H = 30
-        high_H = 179
+        high_H = 90
         # Saturation ranges in [0,255]
-        low_S = 10
+        low_S = 50
         high_S = 255
         # Value ranges in [0,255]
-        low_V = 10
+        low_V = 30
         high_V = 255
         
         # Trackbars do not seem to work properly
@@ -111,6 +111,18 @@ class points_extraction(features_extraction):
         
         # Apply a thresholding on the image and negate to get an image with black blobs
         threshold_mask = cv2.inRange(frame_HSV, (low_H, low_S, low_V), (high_H, high_S, high_V))
+        
+        if DEBUG:
+            cv2.imshow('Mask',threshold_mask)
+        
+        # Opening operation (erosion + dilation) to remove salt-and-pepper noise
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5), (1, 1))
+        threshold_mask = cv2.morphologyEx(threshold_mask, cv2.MORPH_OPEN, kernel)
+        
+        if DEBUG:
+            cv2.imshow('Opening',threshold_mask)
+        
+        # White blobs -> black blobs
         thresholded_img = cv2.bitwise_not(threshold_mask)
 
         if DEBUG:
@@ -128,8 +140,8 @@ class points_extraction(features_extraction):
             # Compute the angle w.r.t the center of visual pattern
             xm = np.sum([np.max(xx),np.min(xx)])/2
             ym = np.sum([np.max(yy),np.min(yy)])/2
-            xx4angles = [x - xm for x in xx] # 0.5*width_frame
-            yy4angles = [y - ym for y in yy] #0.5*height_frame 
+            xx4angles = [x - xm for x in xx]
+            yy4angles = [y - ym for y in yy]
             angles = np.arctan2(yy4angles,xx4angles)
             
             # Compute the distance travelled by the center of the visual pattern
