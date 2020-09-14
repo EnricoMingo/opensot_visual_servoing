@@ -74,7 +74,7 @@ class image_processing:
         self.intrinsic['cx'] = msg.K[2]
         self.intrinsic['cy'] = msg.K[5]
 
-        print(self.intrinsic)
+        #print(self.intrinsic)
 
     def callback_desired_features(self, msg):
 	    
