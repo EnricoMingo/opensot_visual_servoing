@@ -5,6 +5,8 @@ from __future__ import print_function
 import numpy as np
 import cv2
 
+DEBUG = True
+
 class features_extraction:
 
     def __init__(self):
@@ -26,38 +28,38 @@ class points_extraction(features_extraction):
         self.s = np.array([])
         
         # Setup of the opencv's SimpleBlobDetector parameters. 
-        self.params = cv2.SimpleBlobDetector_Params()
+        params = cv2.SimpleBlobDetector_Params()
 
         # For a description of the parameters, see https://www.learnopencv.com/blob-detection-using-opencv-python-c/
-        self.params.blobColor = 0; # 0 -> black 
+        params.blobColor = 0; # 0 -> black 
 
         # Change thresholds
-        self.params.minThreshold = 0
-        self.params.maxThreshold = 255
+        params.minThreshold = 0
+        params.maxThreshold = 255
 
         # Filter by Area.
-        self.params.filterByArea = True
-        self.params.minArea = 50
-        self.params.maxArea = 10000
+        params.filterByArea = True
+        params.minArea = 50
+        params.maxArea = 10000
 
         # Filter by Circularity
-        self.params.filterByCircularity = True
-        self.params.minCircularity = 0.5#0.750
+        params.filterByCircularity = True
+        params.minCircularity = 0.5#0.750
 
         # Filter by Convexity
-        self.params.filterByConvexity = True
-        self.params.minConvexity = 0.01#85
+        params.filterByConvexity = True
+        params.minConvexity = 0.01#85
 
         # Filter by Inertia
-        self.params.filterByInertia = True
-        self.params.minInertiaRatio = 0.1
-        self.params.maxInertiaRatio = 1.0
+        params.filterByInertia = True
+        params.minInertiaRatio = 0.1
+        params.maxInertiaRatio = 1.0
 
         ver = (cv2.__version__).split('.')
         if int(ver[0]) < 3 :
-            self.detector = cv2.SimpleBlobDetector(self.params)
+            self.detector = cv2.SimpleBlobDetector(params)
         else: 
-            self.detector = cv2.SimpleBlobDetector_create(self.params)
+            self.detector = cv2.SimpleBlobDetector_create(params)
         
         # Initialization of flags and counters
         self.track = False
@@ -72,6 +74,9 @@ class points_extraction(features_extraction):
         self.target = np.array([])
         self.set_dummy_target(intrinsic)
 
+        self.window_thresholding_name = "Thresholded image"
+        #self.first = True
+    
     def set_dummy_target(self,intrinsic):
 
         offset = 50
@@ -84,15 +89,35 @@ class points_extraction(features_extraction):
         self.target = arr_in
 
     def run(self, img):
-
-        # Convert in gray scale image
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+        # Color detection using HSV color space
+        frame_HSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         
-        # And get a version in colors (where to show the colored features)
-        gray_c = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+        # Hue ranges in [0,179], green is around 40
+        low_H = 30
+        high_H = 179
+        # Saturation ranges in [0,255]
+        low_S = 10
+        high_S = 255
+        # Value ranges in [0,255]
+        low_V = 10
+        high_V = 255
+        
+        # Trackbars do not seem to work properly
+        #if self.first :
+        #    cv2.namedWindow(self.window_thresholding_name)
+        #    self.first = False
+        # #cv2.createTrackbar("lowH", self.window_thresholding_name, self.low_H, high_H, lambda x : x)
+        
+        # Apply a thresholding on the image and negate to get an image with black blobs
+        threshold_mask = cv2.inRange(frame_HSV, (low_H, low_S, low_V), (high_H, high_S, high_V))
+        thresholded_img = cv2.bitwise_not(threshold_mask)
 
+        if DEBUG:
+            cv2.imshow(self.window_thresholding_name, thresholded_img)
+        
         # Set-up the detector with default parameters.
-        keypoints = self.detector.detect(gray_c)
+        keypoints = self.detector.detect(thresholded_img)
         
         if len(keypoints)==4:
 
@@ -162,20 +187,19 @@ class points_extraction(features_extraction):
             
             pt = (x,y)
             #cv2.circle(gray_c, pt, ray, color_track,  1, cv2.LINE_AA)
-            cv2.circle(gray_c, pt, 8, color_track, -1, cv2.LINE_AA)
+            cv2.circle(img, pt, 8, color_track, -1, cv2.LINE_AA)
             
             pt2 = (x-4,y+4)#(x+15,y+15)
-            cv2.putText(gray_c, str(i), pt2, cv2.FONT_HERSHEY_PLAIN, 0.8, (255,190,120), 1, cv2.LINE_AA)        
+            cv2.putText(img, str(i), pt2, cv2.FONT_HERSHEY_PLAIN, 0.8, (255,190,120), 1, cv2.LINE_AA)        
 
             if self.target.size>0:
                 x_red = int(self.target[2*i])
                 y_red = int(self.target[2*i+1])
                 red_color = (0,10,255)
-                cv2.circle(gray_c, (x_red,y_red), 8, red_color, 1, cv2.LINE_AA)
-                cv2.putText(gray_c, str(i), (x_red-4,y_red+4), cv2.FONT_HERSHEY_PLAIN, 0.8, red_color, 1, cv2.LINE_AA)   
-                
+                cv2.circle(img, (x_red,y_red), 8, red_color, 1, cv2.LINE_AA)
+                cv2.putText(img, str(i), (x_red-4,y_red+4), cv2.FONT_HERSHEY_PLAIN, 0.8, red_color, 1, cv2.LINE_AA)    
 
-        self.image = gray_c
+        self.image = img
 
     def print_features(self):
         
