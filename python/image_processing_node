@@ -52,13 +52,12 @@ class image_processing:
 
         self._subscriber2 = rospy.Subscriber("/image_raw", Image, self.callback, queue_size=1)
 
-        
         # Instantiate the point extraction class
         self.points_ex = points_extraction(self.intrinsic)
 
-	self._subscriber3 = []
+        self._subscriber3 = []
 
-	self._first_publish = True
+        self._first_publish = True
 
 
     def get_intrinsic_param(self, msg):
@@ -78,9 +77,15 @@ class image_processing:
         print(self.intrinsic)
 
     def callback_desired_features(self, msg):
-	desired_features = np.array([])
+	    
+        desired_features = np.array([])
+        
         for feature in msg.features:
-            desired_features = np.append(desired_features, np.array([feature.x*self.intrinsic['fx'] + self.intrinsic['cx'], feature.y*self.intrinsic['fy'] + self.intrinsic['cy']]))
+            desired_features = np.append(desired_features, np.array([
+                feature.x*self.intrinsic['fx'] + self.intrinsic['cx'], 
+                feature.y*self.intrinsic['fy'] + self.intrinsic['cy']
+                ]))
+
         self.points_ex.set_target(desired_features)
 
     def feature_extractor(self, image):
@@ -108,7 +113,7 @@ class image_processing:
             visualFeature_msg.x = (s[2*k]   - self.intrinsic['cx']) / self.intrinsic['fx']
             visualFeature_msg.y = (s[2*k+1] - self.intrinsic['cy']) / self.intrinsic['fy']
             visualFeature_msg.Z = 0.5 ############################################################# THIS IS SET LIKE THIS NOW
-            visualFeature_msg.type = 0
+            visualFeature_msg.type = visualFeature_msg.POINT
 
             visualFeatures_msg.features.append(visualFeature_msg)
 
@@ -116,9 +121,9 @@ class image_processing:
 
         self.vis_feat.publish(visualFeatures_msg)
 
-	if self._first_publish:
-	    self._subscriber3 = rospy.Subscriber("/desired_visual_features", VisualFeatures, self.callback_desired_features, queue_size=1)
-	    self._first_publish = False
+        if self._first_publish:
+            self._subscriber3 = rospy.Subscriber("/desired_visual_features", VisualFeatures, self.callback_desired_features, queue_size=1)
+            self._first_publish = False
 
         # Show the image with openCV
         if SHOW_OPENCV:
