@@ -166,7 +166,7 @@ namespace OpenSoT {
              */
             bool isEyeToHand();
 
-            friend VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
+            //friend VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
 
             /**
              * @brief getFeaturesError
@@ -253,16 +253,16 @@ namespace OpenSoT {
 
        };
 
-       /**
-        * @brief operator % Needs to be redefined for the VisualServoing task in order to have that the % operation
-        * remove Cartesian direction instead of features rows.
-        * At the moment the method is implemented so that columns of the interaction matrix are set to zero.
-        *
-        * @param task
-        * @param rowIndices
-        * @return task
-        */
-       VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
+//       /**
+//        * @brief operator % Needs to be redefined for the VisualServoing task in order to have that the % operation
+//        * remove Cartesian direction instead of features rows.
+//        * At the moment the method is implemented so that columns of the interaction matrix are set to zero.
+//        *
+//        * @param task
+//        * @param rowIndices
+//        * @return task
+//        */
+//       VisualServoing::Ptr operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices);
        }
    }
 }

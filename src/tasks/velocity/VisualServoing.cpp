@@ -348,12 +348,12 @@ const Eigen::VectorXd& VisualServoing::getFeaturesError() const
     return _features_error;
 }
 
-VisualServoing::Ptr OpenSoT::tasks::velocity::operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices)
-{
-    task->_col_indices = rowIndices;
-    task->computeInteractionMatrix();
-    return task;
-}
+//VisualServoing::Ptr OpenSoT::tasks::velocity::operator%(const VisualServoing::Ptr task, const std::list<unsigned int>& rowIndices)
+//{
+//    task->_col_indices = rowIndices;
+//    task->computeInteractionMatrix();
+//    return task;
+//}
 
 
 
