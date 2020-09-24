@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+from __future__ import division
 
 import numpy as np
 import cv2
+import time
 
 DEBUG = True
 
@@ -61,6 +63,20 @@ class points_extraction(features_extraction):
         else: 
             self.detector = cv2.SimpleBlobDetector_create(params)
         
+        # Color detection parameters, using HSV color space
+        # Hue ranges in [0,179], green is around 60
+        self.low_H = 30
+        self.high_H = 90
+        # Saturation ranges in [0,255]
+        self.low_S = 50
+        self.high_S = 255
+        # Value ranges in [0,255]
+        self.low_V = 30
+        self.high_V = 255
+
+        # Kernel used in the 'Opening' operation
+        self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5), (1, 1))
+        
         # Initialization of flags and counters
         self.track = False
         self.counter_not_tracking = 10
@@ -76,6 +92,10 @@ class points_extraction(features_extraction):
 
         self.window_thresholding_name = "Thresholded image"
         #self.first = True
+        
+        # Computation time variables
+        self.counter = 0
+        self.time_elapsed_arr = np.array([])
     
     def set_dummy_target(self,intrinsic):
 
@@ -89,19 +109,16 @@ class points_extraction(features_extraction):
         self.target = arr_in
 
     def run(self, img):
-    
+
+        time_start = time.time()
+        
+        #img_blurred = cv2.medianBlur(img,5)
+
+        #if DEBUG:
+        #    cv2.imshow('Blur',img_blurred)   
+        
         # Color detection using HSV color space
         frame_HSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-        
-        # Hue ranges in [0,179], green is around 60
-        low_H = 30
-        high_H = 90
-        # Saturation ranges in [0,255]
-        low_S = 50
-        high_S = 255
-        # Value ranges in [0,255]
-        low_V = 30
-        high_V = 255
         
         # Trackbars do not seem to work properly
         #if self.first :
@@ -110,14 +127,13 @@ class points_extraction(features_extraction):
         # #cv2.createTrackbar("lowH", self.window_thresholding_name, self.low_H, high_H, lambda x : x)
         
         # Apply a thresholding on the image and negate to get an image with black blobs
-        threshold_mask = cv2.inRange(frame_HSV, (low_H, low_S, low_V), (high_H, high_S, high_V))
+        threshold_mask = cv2.inRange(frame_HSV, (self.low_H, self.low_S, self.low_V), (self.high_H, self.high_S, self.high_V))
         
         if DEBUG:
             cv2.imshow('Mask',threshold_mask)
         
         # Opening operation (erosion + dilation) to remove salt-and-pepper noise
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5), (1, 1))
-        threshold_mask = cv2.morphologyEx(threshold_mask, cv2.MORPH_OPEN, kernel)
+        threshold_mask = cv2.morphologyEx(threshold_mask, cv2.MORPH_OPEN, self.kernel)
         
         if DEBUG:
             cv2.imshow('Opening',threshold_mask)
@@ -188,6 +204,7 @@ class points_extraction(features_extraction):
 
         # Draw the blobs on the image and fill the features vector 's'
         self.s = np.array([])
+        #self.s = np.array([b['center'] for b in self.blobs])  
         for (i,f) in enumerate(self.blobs):
             
             x = int(f['center'][0])
@@ -211,6 +228,18 @@ class points_extraction(features_extraction):
                 cv2.circle(img, (x_red,y_red), 8, red_color, 1, cv2.LINE_AA)
                 cv2.putText(img, str(i), (x_red-4,y_red+4), cv2.FONT_HERSHEY_PLAIN, 0.8, red_color, 1, cv2.LINE_AA)    
 
+        # Measuring time
+        time_elapsed = (time.time() - time_start)
+        self.time_elapsed_arr = np.append(self.time_elapsed_arr, time_elapsed) 
+        
+        if self.counter >= 100:
+            self.counter = 0
+            average_time = round(np.average(self.time_elapsed_arr),3)
+            average_freq = round(1/average_time,1)
+            print('Image processing computation time: ' + str(average_time) + " s (" + str(average_freq) + ' Hz)')
+            self.time_elapsed_arr = np.array([])
+        self.counter += 1
+            
         self.image = img
 
     def print_features(self):
