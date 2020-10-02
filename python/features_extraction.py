@@ -7,7 +7,7 @@ import numpy as np
 import cv2
 import time
 
-DEBUG = True
+DEBUG = False
 
 class features_extraction:
 
@@ -75,7 +75,7 @@ class points_extraction(features_extraction):
         self.high_V = 255
 
         # Kernel used in the 'Opening' operation
-        self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5,5), (1, 1))
+        self.kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (10,10), (1, 1))
         
         # Initialization of flags and counters
         self.track = False
@@ -221,7 +221,7 @@ class points_extraction(features_extraction):
             pt2 = (x-4,y+4)#(x+15,y+15)
             cv2.putText(img, str(i), pt2, cv2.FONT_HERSHEY_PLAIN, 0.8, (255,190,120), 1, cv2.LINE_AA)        
 
-            if self.target.size>0:
+            if self.target.size>2*i+1:
                 x_red = int(self.target[2*i])
                 y_red = int(self.target[2*i+1])
                 red_color = (0,10,255)
