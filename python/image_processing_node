@@ -112,7 +112,7 @@ class image_processing:
             visualFeature_msg = VisualFeature()
             visualFeature_msg.x = (s[2*k]   - self.intrinsic['cx']) / self.intrinsic['fx']
             visualFeature_msg.y = (s[2*k+1] - self.intrinsic['cy']) / self.intrinsic['fy']
-            visualFeature_msg.Z = 0.5 ############################################################# THIS IS SET LIKE THIS NOW
+            visualFeature_msg.Z = 2.5 ############################################################# THIS IS SET LIKE THIS NOW
             visualFeature_msg.type = visualFeature_msg.POINT
 
             visualFeatures_msg.features.append(visualFeature_msg)
