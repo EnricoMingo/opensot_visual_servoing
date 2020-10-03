@@ -96,7 +96,7 @@ class points_extraction(features_extraction):
         # Computation time variables
         self.counter = 0
         self.time_elapsed_arr = np.array([])
-    
+
     def set_dummy_target(self,intrinsic):
 
         offset = 50
@@ -190,17 +190,17 @@ class points_extraction(features_extraction):
 
             self.track = True
             self.counter_not_tracking = 0
-            color_track = (255,50,0)
+            color_track = (0,220,0)
 
         else:
 
             if self.counter_not_tracking < 10:
                 self.track = True
                 self.counter_not_tracking +=1
-                color_track = (255,255,0)
+                color_track = (0,255,0)
             else:
                 self.track = False
-                color_track = (255,255,230)
+                color_track = (255,255,255)
 
         # Draw the blobs on the image and fill the features vector 's'
         self.s = np.array([])
@@ -219,12 +219,12 @@ class points_extraction(features_extraction):
             cv2.circle(img, pt, 8, color_track, -1, cv2.LINE_AA)
             
             pt2 = (x-4,y+4)#(x+15,y+15)
-            cv2.putText(img, str(i), pt2, cv2.FONT_HERSHEY_PLAIN, 0.8, (255,190,120), 1, cv2.LINE_AA)        
+            cv2.putText(img, str(i), pt2, cv2.FONT_HERSHEY_PLAIN, 0.8, (0,120,0), 1, cv2.LINE_AA)        
 
             if self.target.size>2*i+1:
                 x_red = int(self.target[2*i])
                 y_red = int(self.target[2*i+1])
-                red_color = (0,10,255)
+                red_color = (0,30,255)
                 cv2.circle(img, (x_red,y_red), 8, red_color, 1, cv2.LINE_AA)
                 cv2.putText(img, str(i), (x_red-4,y_red+4), cv2.FONT_HERSHEY_PLAIN, 0.8, red_color, 1, cv2.LINE_AA)    
 
