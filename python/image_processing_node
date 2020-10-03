@@ -31,7 +31,8 @@ from cv_bridge import CvBridge, CvBridgeError
                                         
 from opensot_visual_servoing.msg import VisualFeature, VisualFeatures
 
-SHOW_OPENCV=True
+SHOW_OPENCV = True
+SAVE_VIDEO = True
 
 class image_processing:
 
@@ -59,6 +60,10 @@ class image_processing:
 
         self._first_publish = True
 
+        # Video writer
+        if SAVE_VIDEO:
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            self.vw = cv2.VideoWriter('image_processing.avi', fourcc, 20.0, (640,480))
 
     def get_intrinsic_param(self, msg):
         
@@ -129,12 +134,16 @@ class image_processing:
         if SHOW_OPENCV:
             cv2.imshow('Robot camera', image_proc)
 
+            if SAVE_VIDEO:
+                self.vw.write(image_proc)
+
             key = cv2.waitKey(1)
 
             self.stop_it = False
             if key == ord('q'):
                 self.stop_it = True
                 cv2.destroyAllWindows()
+                self.vw.release()
                 rospy.signal_shutdown('Quit')
             if key == ord('r'):
                 self.points_ex.track = False
