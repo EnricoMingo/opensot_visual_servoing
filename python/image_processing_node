@@ -13,7 +13,7 @@ import sys, time
 import numpy as np
 from scipy.ndimage import filters
 
-from features_extraction import points_extraction
+from features_extraction.features_extraction import points_extraction
 
 # OpenCV
 import cv2

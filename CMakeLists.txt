@@ -16,6 +16,8 @@ find_package(OpenSoT REQUIRED)
 find_package(VISP REQUIRED)
 find_package(cartesian_interface REQUIRED)
 
+catkin_python_setup()
+
 add_message_files(
    FILES
    VisualFeature.msg
@@ -80,6 +82,10 @@ install(TARGETS CartesioVisualServoing
 
 install(DIRECTORY include DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
 FILES_MATCHING PATTERN "*.h")
+
+
+catkin_install_python(PROGRAMS python/image_processing_node
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 if(COMPILE_TESTS)
   enable_testing()
