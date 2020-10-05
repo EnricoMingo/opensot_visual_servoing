@@ -63,7 +63,7 @@ class image_processing:
         # Video writer
         if SAVE_VIDEO:
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            self.vw = cv2.VideoWriter('image_processing.avi', fourcc, 20.0, (640,480))
+            self.vw = cv2.VideoWriter('/tmp/image_processing.avi', fourcc, 20.0, (640,480))
 
     def get_intrinsic_param(self, msg):
         
@@ -143,7 +143,8 @@ class image_processing:
             if key == ord('q'):
                 self.stop_it = True
                 cv2.destroyAllWindows()
-                self.vw.release()
+		if SAVE_VIDEO:
+                    self.vw.release()
                 rospy.signal_shutdown('Quit')
             if key == ord('r'):
                 self.points_ex.track = False
