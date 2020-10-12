@@ -341,6 +341,8 @@ void VisualServoing::_log(XBot::MatLogger::Ptr logger)
         }
     }
 
+    _cartesian_task->log(logger);
+
 }
 
 const Eigen::VectorXd& VisualServoing::getFeaturesError() const
