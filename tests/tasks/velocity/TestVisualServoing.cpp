@@ -300,7 +300,7 @@ TEST_F(testVisualServoingTask, testJacobians)
 
     std::cout<<"vs->getA(): \n"<<vs->getA()<<std::endl;
 
-    EXPECT_FALSE(A == vs->getA());
+    EXPECT_FALSE(A.rows() == vs->getA().rows());
 
     OpenSoT::tasks::velocity::Cartesian::Ptr foo =
             boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("foo", this->q, *(this->_model),
