@@ -10,7 +10,7 @@ The code contained in the <code>python</code> folder implements a ROS node, used
   
 To run the node, lunch it in a terminal as
 
-<code> ./image_processing_node image_raw:=image_topci_anme camera_info:=camera_info_topic_name</code>
+<code> ./image_processing_node image_raw:=image_topic_name camera_info:=camera_info_topic_name</code>
 
 For example:
 
