@@ -4,7 +4,6 @@
 #include <opensot_visual_seroving/utils/Utils.h>
 
 
-
 using namespace OpenSoT::tasks::velocity;
 
 VisualServoing::VisualServoing(std::string task_id,
@@ -312,7 +311,7 @@ const std::list<unsigned int>& VisualServoing::getFeatureListSelection() const
     return _featureSelectionList;
 }
 
-void VisualServoing::_log(XBot::MatLogger::Ptr logger)
+void VisualServoing::_log(XBot::MatLogger2::Ptr logger)
 {
     if(_L.rows() > 0)
         logger->add(_task_id + "_L", _L);

@@ -4,6 +4,7 @@
 #include <OpenSoT/tasks/velocity/Cartesian.h>
 #include <OpenSoT/utils/Piler.h>
 #include <visp/vpBasicFeature.h>
+#include <matlogger2/matlogger2.h>
 
 using namespace XBot::Utils;
 
@@ -248,7 +249,7 @@ namespace OpenSoT {
              * @brief _log log extra variables
              * @param logger
              */
-            virtual void _log(XBot::MatLogger::Ptr logger);
+            virtual void _log(XBot::MatLogger2::Ptr logger);
 
 
        };

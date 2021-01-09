@@ -201,10 +201,16 @@ TEST_F(testVisualServoingTask, testInteractionMatrix)
 
 }
 
+XBot::MatLogger2::Ptr getLogger(const std::string& name)
+{
+    XBot::MatLogger2::Ptr logger = XBot::MatLogger2::MakeLogger(name); // date-time automatically appended
+    logger->set_buffer_mode(XBot::VariableBuffer::Mode::circular_buffer);
+    return logger;
+}
+
 TEST_F(testVisualServoingTask, testBasics)
 {
-    XBot::MatLogger::Ptr logger;
-    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testBasics");
+    XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testBasics");
     this->vs_task->log(logger);
 
     Eigen::Matrix6d I6; I6.setIdentity();
@@ -279,8 +285,6 @@ TEST_F(testVisualServoingTask, testBasics)
     EXPECT_TRUE(this->vs_task->getb() == expected_b);
 
     this->vs_task->log(logger);
-    logger->flush();
-
 }
 
 TEST_F(testVisualServoingTask, testJacobians)
@@ -319,8 +323,7 @@ TEST_F(testVisualServoingTask, testProjection)
 
     std::cout << "testProjection" << std::endl;
 
-    XBot::MatLogger::Ptr logger;
-    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testProjection");
+    XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testProjection");
     
     vpHomogeneousMatrix cdMo(0, 0, 0.75, 0, 0, 0);
     vpHomogeneousMatrix cMo(0.15, -0.1, 1., vpMath::rad(10), vpMath::rad(-10), vpMath::rad(50));
@@ -397,14 +400,12 @@ TEST_F(testVisualServoingTask, testProjection)
         this->vs_task->update(this->q);
     
     }
-    logger->flush();
 
 }
 
 TEST_F(testVisualServoingTask, testStandardVS)
 {
-    XBot::MatLogger::Ptr logger;
-    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testStandardVS");
+    XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testStandardVS");
     
     /// This test aims at verifying the correctness of v = lambda L^{-1} e
     
@@ -592,14 +593,11 @@ TEST_F(testVisualServoingTask, testStandardVS)
     EXPECT_LE(b.norm(), 1e-6);
 
 
-    logger->flush();
-
 }
 
 TEST_F(testVisualServoingTask, testOpenSoTTask)
 {
-    XBot::MatLogger::Ptr logger;
-    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testOpenSoTTask");
+    XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testOpenSoTTask");
 
     //std::cout << " point features: " << this->point_features.get_x << std::endl;
     int i = 0;
@@ -745,9 +743,6 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
 
     EXPECT_LE(this->vs_task->getb().norm(), 1e-6);
 
-
-    logger->flush();
-
 }
 
 /**
@@ -818,8 +813,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     }
     ///
 
-    XBot::MatLogger::Ptr logger;
-    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testOpenSoTTask");
+    XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testOpenSoTTask");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr l_sole =
             boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_sole", this->q, *(this->_model), "l_sole", "world");
@@ -1003,9 +997,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     //5. check visual servoing convergence
     EXPECT_LE(this->vs_task->getFeaturesError().norm(), 1e-3);
     
-    std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;
-
-    logger->flush();   
+    std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;  
 }
 
 TEST_F(testVisualServoingTask, testVSAM)
@@ -1037,8 +1029,7 @@ TEST_F(testVisualServoingTask, testVSAM)
     }
     ///
 
-    XBot::MatLogger::Ptr logger;
-    logger = XBot::MatLogger::getLogger("testVisualServoingTask_testVSAM");
+    XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testVSAM");
 
     OpenSoT::tasks::velocity::CoM::Ptr com =
             boost::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
@@ -1187,8 +1178,6 @@ TEST_F(testVisualServoingTask, testVSAM)
     EXPECT_NEAR(this->vs_task->getFeaturesError().norm(), 1e-3, 1e-1);
 
     std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;
-
-    logger->flush();
 }
 
 }

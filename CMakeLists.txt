@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS cartesian_interface
 find_package(OpenSoT REQUIRED)
 find_package(VISP REQUIRED)
 find_package(cartesian_interface REQUIRED)
+find_package(matlogger2 REQUIRED)
 
 catkin_python_setup()
 
