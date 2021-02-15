@@ -28,7 +28,9 @@
 
 #include <OpenSoT/tasks/velocity/AngularMomentum.h>
 
-#include <OpenSoT/constraints/velocity/SelfCollisionAvoidance.h>
+#if SELF_COLLISION_TEST
+    #include <OpenSoT/constraints/velocity/SelfCollisionAvoidance.h>
+#endif
 
 namespace{
 
@@ -1071,6 +1073,8 @@ TEST_F(testVisualServoingTask, testVSAM)
     std::list<unsigned int> id = {2};
 
     std::string waist = "Waist";
+
+#if SELF_COLLISION_TEST
     OpenSoT::constraints::velocity::SelfCollisionAvoidance::Ptr sc =
             boost::make_shared<OpenSoT::constraints::velocity::SelfCollisionAvoidance>(this->q, *this->_model, waist,
                                                                     std::numeric_limits<double>::infinity(), 0.005);
@@ -1082,11 +1086,18 @@ TEST_F(testVisualServoingTask, testVSAM)
     whiteList.push_back(std::pair<std::string,std::string>("LFoot", "RFootmot"));
     whiteList.push_back(std::pair<std::string,std::string>("RFoot", "LFootmot"));
     sc->setCollisionWhiteList(whiteList);
+#endif
 
     OpenSoT::AutoStack::Ptr stack;
+#if SELF_COLLISION_TEST
     stack = ((com + mom)/
              (camera%id)/
-            (this->vs_task)/(postural))<<vel_lims<<joint_lims;//<<sc;
+            (this->vs_task)/(postural))<<vel_lims<<joint_lims<<sc;
+#else
+    stack = ((com + mom)/
+             (camera%id)/
+            (this->vs_task)/(postural))<<vel_lims<<joint_lims;
+#endif
 
     OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e9, OpenSoT::solvers::solver_back_ends::qpOASES);
 
