@@ -1,0 +1,228 @@
+#!/usr/bin/env python
+
+# ROSpy node to subscribe to a ROS image topic
+# Taken and modified from http://wiki.ros.org/rospy_tutorials/Tutorials/WritingImagePublisherSubscriber
+
+from __future__ import division
+#from __future__ import print_function
+
+# Python libs
+import sys, time
+
+# numpy and scipy
+import numpy as np
+from scipy.ndimage import filters
+
+from features_extraction.features_extraction import points_extraction
+
+# OpenCV
+import cv2
+
+# Ros libraries
+import roslib
+import rospy
+from rospy.numpy_msg import numpy_msg
+
+
+# Ros Messages
+from sensor_msgs.msg import Image, CompressedImage, CameraInfo
+# We do not use cv_bridge it does not support CompressedImage in python
+from cv_bridge import CvBridge, CvBridgeError
+                                        
+from opensot_visual_servoing.msg import VisualFeature, VisualFeatures
+
+SHOW_OPENCV = True
+SAVE_VIDEO = True
+
+class image_processing:
+
+    def __init__(self):
+        
+        # Publishers and subscribers
+
+        self.bridge = CvBridge()
+
+        self.image_pub = rospy.Publisher("/image_processing/image", Image, queue_size=10, latch=True)
+        
+        self.vis_feat = rospy.Publisher("/image_processing/visual_features", VisualFeatures, queue_size=10, latch=True)
+
+        camera_info_msg = rospy.wait_for_message("/camera_info", CameraInfo, timeout=None)
+        self.get_intrinsic_param(camera_info_msg)
+
+        self._subscriber = rospy.Subscriber("/image_raw/compressed", CompressedImage, self.callback_compressed,  queue_size = 1)
+
+        self._subscriber2 = rospy.Subscriber("/image_raw", Image, self.callback, queue_size=1)
+
+        self._subscriber4 = rospy.Subscriber("/image_processing/reference_features", VisualFeatures, self.callback_ref_sequence_features, queue_size=1)
+            
+        # Instantiate the point extraction class
+        self.points_ex = points_extraction(self.intrinsic)
+
+        self._subscriber3 = []
+
+        self._first_publish = True
+
+        # Video writer
+        if SAVE_VIDEO:
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            self.vw = cv2.VideoWriter('/tmp/image_processing.avi', fourcc, 20.0, (640,480))
+
+    def get_intrinsic_param(self, msg):
+        
+        # Extract the camera intrinsic parameters from the matrix K 
+        # (Ref.: http://docs.ros.org/melodic/api/sensor_msgs/html/msg/CameraInfo.html)
+
+        print("Got camera info!")
+
+        self.intrinsic = {'fx' : 0, 'fy': 0, 'cx': 0, 'cy' : 0}
+        
+        self.intrinsic['fx'] = msg.K[0]
+        self.intrinsic['fy'] = msg.K[4]
+        self.intrinsic['cx'] = msg.K[2]
+        self.intrinsic['cy'] = msg.K[5]
+
+        #print(self.intrinsic)
+
+    def callback_desired_features(self, msg):
+	    
+        desired_features = np.array([])
+        
+        for feature in msg.features:
+            desired_features = np.append(desired_features, np.array([
+                feature.x*self.intrinsic['fx'] + self.intrinsic['cx'], 
+                feature.y*self.intrinsic['fy'] + self.intrinsic['cy']
+                ]))
+
+        self.points_ex.set_target(desired_features)
+
+    def callback_ref_sequence_features(self, msg):
+	    
+        ref_sequence_features = np.array([])
+        
+        for feature in msg.features:
+            ref_sequence_features = np.append(ref_sequence_features, np.array([
+                feature.x*self.intrinsic['fx'] + self.intrinsic['cx'], 
+                feature.y*self.intrinsic['fy'] + self.intrinsic['cy']
+                ]))
+            #ref_sequence_features = np.append(ref_sequence_features, np.array([
+            #    feature.x, feature.y
+            #    ]))
+
+        self.points_ex.set_ref_sequence(ref_sequence_features)
+
+    def feature_extractor(self, image):
+
+        # Run feature point features extraction algorithm
+        self.points_ex.run(image)
+
+        # Get the processed image
+        image_proc = self.points_ex.get_image()
+
+        # Publish the processed image
+        self.image_pub.publish(self.bridge.cv2_to_imgmsg(image_proc, "bgr8"))
+
+        # Get visual features (in pixel)
+        s = self.points_ex.get_features()
+
+        # Publish the visual features in x-y format
+        visualFeatures_msg = VisualFeatures()
+
+        # Number of features TODO: to be better computed
+        n_points = int(0.5 * len(s))
+
+        for k in range(0, n_points):
+            visualFeature_msg = VisualFeature()
+            visualFeature_msg.x = (s[2*k]   - self.intrinsic['cx']) / self.intrinsic['fx']
+            visualFeature_msg.y = (s[2*k+1] - self.intrinsic['cy']) / self.intrinsic['fy']
+            visualFeature_msg.Z = 1.85 ############################################################# THIS IS SET LIKE THIS NOW
+            visualFeature_msg.type = visualFeature_msg.POINT
+
+            visualFeatures_msg.features.append(visualFeature_msg)
+
+        visualFeatures_msg.header.stamp = rospy.Time.now()
+
+        self.vis_feat.publish(visualFeatures_msg)
+
+        
+        if self._first_publish:
+            self._subscriber3 = rospy.Subscriber("/desired_visual_features", VisualFeatures, self.callback_desired_features, queue_size=1)
+            self._first_publish = False
+        
+        # Show the image with openCV
+        if SHOW_OPENCV:
+            cv2.imshow('Robot camera', image_proc)
+
+            if SAVE_VIDEO:
+                self.vw.write(image_proc)
+
+            key = cv2.waitKey(1)
+
+            self.stop_it = False
+            if key == ord('q'):
+                if SAVE_VIDEO:
+                    self.vw.release()
+                self.stop_it = True
+                cv2.destroyAllWindows()
+                rospy.signal_shutdown('Quit')
+            if key == ord('r'):
+                self.points_ex.track = False
+
+    def callback_compressed(self, ros_data):
+
+        '''Callback function of CompressedImage topic.'''
+        print('received image of type: "%s"' % ros_data.format)
+                
+        # Direct conversion to CV2
+        np_arr = np.fromstring(ros_data.data, np.uint8)
+
+        ver = (cv2.__version__).split('.')
+        if int(ver[0]) < 3 :
+            image_np = cv2.imdecode(np_arr, cv2.CV_LOAD_IMAGE_COLOR)
+        else: # OpenCV >= 3.0
+            image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR) 
+
+        self.feature_extractor(image)
+
+    def callback(self, ros_data):
+
+        '''Callback function of (non-compressed) Image topic.'''
+
+        # Direct conversion to CV2
+        np_arr = np.fromstring(ros_data.data, np.uint8)
+
+        try:
+            image = self.bridge.imgmsg_to_cv2(ros_data, "bgr8")
+        except CvBridgeError as e:
+            print(e)
+
+        self.feature_extractor(image)
+
+
+def main(args):
+
+    '''Initializes and cleanup ros node'''
+
+    print("Running image_processing_node...")
+    
+    rospy.init_node('image_processing', anonymous=True)
+    
+    ic = image_processing()
+    
+    while not rospy.is_shutdown():
+        rospy.spin()
+
+    if SAVE_VIDEO:
+        ic.vw.release()
+
+    '''
+    try:
+        rospy.spin()
+
+    except KeyboardInterrupt:
+        print "Shutting down ROS image_processing module"
+    '''
+
+    cv2.destroyAllWindows()
+
+if __name__ == '__main__':
+    main(sys.argv)
