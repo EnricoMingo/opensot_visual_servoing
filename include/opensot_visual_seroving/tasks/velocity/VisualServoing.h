@@ -22,10 +22,9 @@ namespace OpenSoT {
              * @param robot model
              * @param base_link of the visual servoing task
              * @param camera_link controlled camera link
-             * @param features to track
+             * @param feature_list features to track (in normalized coordinates)
              * NOTE:
              * in construction all the features (rows of the interaction matrix) are tracked.
-             * To change this use the method
              */
             VisualServoing(std::string task_id,
                            const Eigen::VectorXd& x,
@@ -48,15 +47,15 @@ namespace OpenSoT {
             const Eigen::Matrix6d& getVelocityTwistMatrix() const;
 
             /**
-             * @brief getInteractionMatrix used to get computed interaction matrix
+             * @brief getInteractionMatrix used to get computed interaction matrix (in normalized coordinates)
              * @return [kx6] interaction matrix, with k proportional to number of features
              */
             const Eigen::MatrixXd& getInteractionMatrix() const;
 
             /**
              * @brief addFeature used to insert a new couple of feature and desired feature
-             * @param s_cur feature
-             * @param s_star desired feature
+             * @param s_cur feature (in normalized coordinates)
+             * @param s_star desired feature (in normalized coordinates)
              * @param select point to a row of the interaction matrix associated to a specific feature.
              * To select all the feature just use vpBasicFeature::FEATURE_ALL
              * NOTE: every time a new feature is added the intearaction matrix is computed and Weight matrix is
@@ -71,8 +70,8 @@ namespace OpenSoT {
             
             /**
              * @brief setFeatures used to set a list of new features and desired features
-             * @param feature_list
-             * @param desired_feature_list
+             * @param feature_list (in normalized coordinates)
+             * @param desired_feature_list (in normalized coordinates)
              * @param feature_selection_list each element of this list point to a row of the interaction matrix
              * associated to a specific feature. To select all the feature just use vpBasicFeature::FEATURE_ALL
              * @return false if inputs have different size
@@ -86,14 +85,14 @@ namespace OpenSoT {
 
             /**
              * @brief setFeatures
-             * @param feature_list
+             * @param feature_list (in normalized coordinates)
              * @return false if feature_list size is different from internal number of features
              */
             bool setFeatures(std::list<vpBasicFeature *>& feature_list);
 
             /**
              * @brief setDesiredFeatures is used to change the desired feature list
-             * @param desired_feature_list list of desired features
+             * @param desired_feature_list list of desired features (in normalized coordinates)
              * @return false if the lenght of desired features is different from the actual lenght of features
              */
             bool setDesiredFeatures(std::list<vpBasicFeature *>& desired_feature_list);
@@ -108,13 +107,13 @@ namespace OpenSoT {
 
             /**
              * @brief getFeatures used to get feature list
-             * @return list of features
+             * @return list of features (in normalized coordinates)
              */
             const std::list<vpBasicFeature *>& getFeatures() const;
 
             /**
              * @brief getDesiredFeatures used to get desired feature list
-             * @return list of desired features
+             * @return list of desired features (in normalized coordinates)
              */
             const std::list<vpBasicFeature *>& getDesiredFeatures() const;
 
@@ -126,9 +125,9 @@ namespace OpenSoT {
 
             /**
              * @brief computeInteractionMatrixFromList used to compyte interaction matrix
-             * @param featureList list of features
-             * @param featureSelectionList list of feature selectors
-             * @param L interaction matrix
+             * @param featureList list of features (in normalized coordinates)
+             * @param featureSelectionList list of feature selectors (in normalized coordinates)
+             * @param L interaction matrix (in normalized coordinates)
              */
             static void computeInteractionMatrixFromList(const std::list<vpBasicFeature *> &featureList,
                                                          const std::list<unsigned int> &featureSelectionList, vpMatrix &L);

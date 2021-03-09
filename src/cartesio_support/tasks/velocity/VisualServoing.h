@@ -48,7 +48,10 @@ namespace XBot {
         };
 
 
-
+        /**
+         * @brief The VisualServoingImpl class implements CartesI/O ViasualServoing task.
+         * NOTE: features are always considered in normalized coordinates.
+         */
         class VisualServoingImpl: public virtual VisualServoingTask,
                                   public TaskDescriptionImpl
         {
@@ -102,9 +105,19 @@ namespace XBot {
             ros::Subscriber _feature_sub, _desired_feature_sub;
             ros::Publisher _reference_features;
 
+            /**
+             * @brief toVisualFeatureMsg transform a list of visual feature in a visual feature msg
+             * @param feature_list list of features
+             * @param features_type type of feature (point, line, etc...)
+             * @return pensot_visual_servoing::VisualFeatures (normalized coordinates)
+             */
             opensot_visual_servoing::VisualFeatures toVisualFeatureMsg(const std::list<vpBasicFeature * >& feature_list,
                                                                        const std::string& features_type);
-
+            /**
+             * @brief getFeaturesFromMsg transform a feature msg in a list of features
+             * @param msg visaul feature msg (in normalized coordinates)
+             * @return list of features (in normalized coordinates)
+             */
             std::list<vpBasicFeature*> getFeaturesFromMsg(opensot_visual_servoing::VisualFeaturesConstPtr msg);
 
             bool _visual_servoing_init;
