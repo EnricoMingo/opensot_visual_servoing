@@ -34,6 +34,7 @@ from opensot_visual_servoing.msg import VisualFeature, VisualFeatures
 SHOW_OPENCV = True
 SAVE_VIDEO = True
 
+# This class processes an image and provides features in normalized coordinates, as output. 
 class image_processing:
 
     def __init__(self):
@@ -53,6 +54,10 @@ class image_processing:
 
         self._subscriber2 = rospy.Subscriber("/image_raw", Image, self.callback, queue_size=1)
 
+        # ROS parameter
+        self.depth = rospy.get_param("~depth", default=1.85)
+        rospy.loginfo('Feature depth set to %f', self.depth) 
+		
         # Instantiate the point extraction class
         self.points_ex = points_extraction(self.intrinsic)
 
@@ -85,6 +90,8 @@ class image_processing:
 	    
         desired_features = np.array([])
         
+		# Take the features as given by Cartesio (in normalized coordinates)
+		# To be able to show them, convert in pixel units
         for feature in msg.features:
             desired_features = np.append(desired_features, np.array([
                 feature.x*self.intrinsic['fx'] + self.intrinsic['cx'], 
@@ -113,11 +120,13 @@ class image_processing:
         # Number of features TODO: to be better computed
         n_points = int(0.5 * len(s))
 
+		# Publish feature in normalized coordinates
+		# Ref: https://visp-doc.inria.fr/doxygen/visp-daily/tutorial-ibvs.html
         for k in range(0, n_points):
             visualFeature_msg = VisualFeature()
             visualFeature_msg.x = (s[2*k]   - self.intrinsic['cx']) / self.intrinsic['fx']
             visualFeature_msg.y = (s[2*k+1] - self.intrinsic['cy']) / self.intrinsic['fy']
-            visualFeature_msg.Z = 1.85 ############################################################# THIS IS SET LIKE THIS NOW
+            visualFeature_msg.Z = self.depth
             visualFeature_msg.type = visualFeature_msg.POINT
 
             visualFeatures_msg.features.append(visualFeature_msg)
@@ -127,6 +136,7 @@ class image_processing:
         self.vis_feat.publish(visualFeatures_msg)
 
         if self._first_publish:
+			# It takes features in normalized coordinates (to be converted in pixels)
             self._subscriber3 = rospy.Subscriber("/desired_visual_features", VisualFeatures, self.callback_desired_features, queue_size=1)
             self._first_publish = False
 
