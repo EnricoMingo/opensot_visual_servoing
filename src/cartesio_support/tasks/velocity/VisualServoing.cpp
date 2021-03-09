@@ -153,11 +153,6 @@ const std::list<unsigned int>& VisualServoingImpl::getFeatureSelectionList() con
     return _featureSelectionList;
 }
 
-void VisualServoingImpl::setVelocityTwistMatrix(const Eigen::Matrix6d& V)
-{
-    _V = V;
-}
-
 void VisualServoingImpl::addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star, unsigned int select)
 {
     _featureList.push_back(&s_cur);
@@ -273,10 +268,11 @@ VisualServoingRos::toVisualFeatureMsg(const std::list<vpBasicFeature * >& featur
     {
         for(auto f : feature_list)
         {
+           vpFeaturePoint * p = (vpFeaturePoint*)(f);
            feature.type = opensot_visual_servoing::VisualFeature::POINT;
-           feature.x = f->get_s()[0];
-           feature.y = f->get_s()[1];
-           feature.Z = 0.; //
+           feature.x = p->get_x();
+           feature.y = p->get_y();
+           feature.Z = p->get_Z(); //
            msg.features.push_back(feature);
         }
     }

@@ -38,7 +38,6 @@ namespace XBot {
                 virtual const std::list<vpBasicFeature * >& getDesiredFeatures() const = 0;
                 virtual const std::list<unsigned int>& getFeatureSelectionList() const = 0;
 
-                virtual void setVelocityTwistMatrix(const Eigen::Matrix6d& V) = 0;
                 virtual void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star,
                                         unsigned int select = vpBasicFeature::FEATURE_ALL) = 0;
                 virtual bool setFeatures(std::list<vpBasicFeature *>& feature_list,
@@ -66,7 +65,6 @@ namespace XBot {
                 const std::list<unsigned int>& getFeatureSelectionList() const override;
 
 
-                void setVelocityTwistMatrix(const Eigen::Matrix6d& V) override;
                 void addFeature(vpBasicFeature &s_cur, vpBasicFeature &s_star,
                                 unsigned int select = vpBasicFeature::FEATURE_ALL) override;
                 bool setFeatures(std::list<vpBasicFeature *>& feature_list,
@@ -80,7 +78,6 @@ namespace XBot {
                 std::string _distal_link;
                 std::string _feature_type;
 
-                Eigen::Matrix6d _V;
                 std::list<vpBasicFeature *> _featureList, _desiredFeatureList;
                 std::list<unsigned int> _featureSelectionList;
         };
