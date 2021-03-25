@@ -3,6 +3,13 @@ opensot_visual_servoing
 
 Package containing tasks for visual servoing.
 
+CartesI/O visual servoing support
+---------------------------------
+To run the visual servoing framework, CartesI/O needs another node called ```image_processing_node``` which provides visual features to the ```opensot_visual_servoing``` task:
+
+![block scheme](docs/cartesio_visual_servoing.jpeg?raw=true "block scheme")
+
+
 Python code
 -----------
   
