@@ -242,7 +242,7 @@ class points_extraction(features_extraction):
                 blending_color = int(((k+1)/KK)*200)
                 max_size = 15
                 blending_size  = int( max_size- ((k+1)/KK) * max_size )
-                ref_color = (0,blending_color,255)
+                ref_color = (255,blending_color,0)
                 
                 for i in range(0,n_features):
                     x_seq = int(self.ref_sequence[k+2*i])
