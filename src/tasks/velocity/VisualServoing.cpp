@@ -21,7 +21,7 @@ VisualServoing::VisualServoing(std::string task_id,
         _featureSelectionList.push_back(vpBasicFeature::FEATURE_ALL);
 
 
-    _cartesian_task = boost::make_shared<Cartesian>("vs_"+camera_link, x, robot, camera_link, base_link);
+    _cartesian_task = std::make_shared<Cartesian>("vs_"+camera_link, x, robot, camera_link, base_link);
     _cartesian_task->setLambda(0.0); // not needed actually, just as reminder
     _cartesian_task->setIsBodyJacobian(true); //we want to control the robot in camera_frame
 

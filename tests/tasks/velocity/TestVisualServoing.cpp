@@ -81,7 +81,7 @@ protected:
         _model->update();
 
 
-        vs_task = boost::make_shared<OpenSoT::tasks::velocity::VisualServoing>("visual_servoing", q,
+        vs_task = std::make_shared<OpenSoT::tasks::velocity::VisualServoing>("visual_servoing", q,
                                                                                 *_model,
                                                                                 base_link, camera_frame,
                                                                                 generic_features);
@@ -309,7 +309,7 @@ TEST_F(testVisualServoingTask, testJacobians)
     EXPECT_FALSE(A.rows() == vs->getA().rows());
 
     OpenSoT::tasks::velocity::Cartesian::Ptr foo =
-            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("foo", this->q, *(this->_model),
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("foo", this->q, *(this->_model),
                                                                     this->camera_frame, this->base_link);
 
     OpenSoT::tasks::Aggregated::TaskPtr aggr_tasks = foo%id + this->vs_task%id;
@@ -669,7 +669,7 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
     OpenSoT::AutoStack::Ptr stack;
     stack /= this->vs_task;
 
-    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack);
+    OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack);
 
 
     Eigen::VectorXd q = this->q;
@@ -818,36 +818,36 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testOpenSoTTask");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr l_sole =
-            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_sole", this->q, *(this->_model), "l_sole", "world");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_sole", this->q, *(this->_model), "l_sole", "world");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr r_sole =
-            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_sole", this->q, *(this->_model), "r_sole", "world");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_sole", this->q, *(this->_model), "r_sole", "world");
 
     OpenSoT::tasks::velocity::CoM::Ptr com =
-            boost::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
+            std::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
     com->setLambda(0.1);
 
     OpenSoT::tasks::velocity::Postural::Ptr postural =
-            boost::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
+            std::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
     postural->setLambda(0.1);
 
     double dt = 0.001;
     if(is_ros_running)
         rate = std::make_shared<ros::Rate>(1./dt);
     OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
-            boost::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(M_PI, dt, this->q.size());
+            std::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(M_PI, dt, this->q.size());
 
     OpenSoT::tasks::velocity::Cartesian::Ptr l_arm =
-            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_arm", this->q, *(this->_model), "LSoftHand", "torso");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_arm", this->q, *(this->_model), "LSoftHand", "torso");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr r_arm =
-            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_arm", this->q, *(this->_model), "RSoftHand", "torso");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_arm", this->q, *(this->_model), "RSoftHand", "torso");
 
 
     Eigen::VectorXd qmin, qmax;
     this->_model->getJointLimits(qmin, qmax);
     OpenSoT::constraints::velocity::JointLimits::Ptr joint_lims =
-            boost::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
+            std::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
 
 
     this->vs_task->setLambda(0.001);
@@ -857,7 +857,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
                                     (com%id + 10.*this->vs_task + l_arm + r_arm)/
                                     (postural))<<vel_lims<<joint_lims;
 
-    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e7);
+    OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e7);
 
     
     // Get the camera pose
@@ -1034,15 +1034,15 @@ TEST_F(testVisualServoingTask, testVSAM)
     XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testVSAM");
 
     OpenSoT::tasks::velocity::CoM::Ptr com =
-            boost::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
+            std::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
     com->setLambda(0.);
 
     OpenSoT::tasks::velocity::AngularMomentum::Ptr mom =
-            boost::make_shared<OpenSoT::tasks::velocity::AngularMomentum>(this->q, *(this->_model));
+            std::make_shared<OpenSoT::tasks::velocity::AngularMomentum>(this->q, *(this->_model));
 
 
     OpenSoT::tasks::velocity::Postural::Ptr postural =
-            boost::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
+            std::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
     postural->setLambda(0.005);
     Eigen::MatrixXd W = postural->getWeight();
     for(unsigned int i = 0; i < 6; ++i)
@@ -1057,17 +1057,17 @@ TEST_F(testVisualServoingTask, testVSAM)
     this->_model->getVelocityLimits(qdotlims);
     std::cout<<"dq lims: "<<qdotlims.transpose()<<std::endl;
     OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
-            boost::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(qdotlims, dt);
+            std::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(qdotlims, dt);
 
     Eigen::VectorXd qmin, qmax;
     this->_model->getJointLimits(qmin, qmax);
     OpenSoT::constraints::velocity::JointLimits::Ptr joint_lims =
-            boost::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
+            std::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
 
     this->vs_task->setLambda(0.01);
 
     OpenSoT::tasks::velocity::Cartesian::Ptr camera =
-            boost::make_shared<OpenSoT::tasks::velocity::Cartesian>(this->camera_frame, this->q,
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>(this->camera_frame, this->q,
                                                                     *this->_model, this->camera_frame, this->base_link);
     camera->setLambda(0.);
     std::list<unsigned int> id = {2};
@@ -1099,7 +1099,7 @@ TEST_F(testVisualServoingTask, testVSAM)
             (this->vs_task)/(postural))<<vel_lims<<joint_lims;
 #endif
 
-    OpenSoT::solvers::iHQP::Ptr solver = boost::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e9, OpenSoT::solvers::solver_back_ends::qpOASES);
+    OpenSoT::solvers::iHQP::Ptr solver = std::make_shared<OpenSoT::solvers::iHQP>(*stack, 1e9, OpenSoT::solvers::solver_back_ends::qpOASES);
 
     // Get the camera pose
     Eigen::Affine3d T;

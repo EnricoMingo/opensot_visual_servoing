@@ -13,7 +13,7 @@ namespace OpenSoT {
        namespace velocity {
        class VisualServoing: public Task < Eigen::MatrixXd, Eigen::VectorXd > {
          public:
-            typedef boost::shared_ptr<VisualServoing> Ptr;
+            typedef std::shared_ptr<VisualServoing> Ptr;
 
            /**
              * @brief VisualServoing constructor
