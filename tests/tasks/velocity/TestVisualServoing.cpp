@@ -787,7 +787,7 @@ void publishRobotModel(robot_state_publisher::RobotStatePublisher* robot_state_p
     tf::Transform T(rot, p);
 
 
-    robot_state_publisher_->publishTransforms(joint_map, t, "");
+    robot_state_publisher_->publishTransforms(joint_map, t);
     world_broadcaster->sendTransform(tf::StampedTransform(T, t, "world", "Waist"));
 }
 
@@ -921,7 +921,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     dq.setZero(q.size());
 
     if(is_ros_running)
-        robot_state_publisher_->publishFixedTransforms("", true);
+        robot_state_publisher_->publishFixedTransforms(true);
 
     for(unsigned int i = 0; i < 10000; ++i)
     {
@@ -1141,7 +1141,7 @@ TEST_F(testVisualServoingTask, testVSAM)
     dq.setZero(q.size());
 
     if(is_ros_running)
-        robot_state_publisher_->publishFixedTransforms("", true);
+        robot_state_publisher_->publishFixedTransforms(true);
 
     for(unsigned int i = 0; i < 3000; ++i)
     {
