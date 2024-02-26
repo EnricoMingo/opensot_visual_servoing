@@ -5,7 +5,7 @@ set(PROJECTNAME tests)
 project(${PROJECTNAME})
 
 find_package(OpenSoT REQUIRED)
-find_package(XBotInterface REQUIRED)
+find_package(xbot2_interface REQUIRED)
 find_package(catkin REQUIRED COMPONENTS cartesian_interface roscpp urdf roslib kdl_parser robot_state_publisher)
 
 # compite GTest
@@ -20,7 +20,7 @@ if (NOT GTEST_FOUND)
     set(GTEST_BOTH_LIBRARIES gtest gtest_main)
 endif()
 
-include_directories(${GTEST_INCLUDE_DIRS} ${OpenSoT_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} ${XBotInterface_INCLUDE_DIRS})
+include_directories(${GTEST_INCLUDE_DIRS} ${OpenSoT_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS} )
 link_directories(${GTEST_LIB_DIRS})
 
 # add local include
@@ -29,7 +29,7 @@ enable_testing()
 
 set(VS_TESTS testVisualServoingVelocityTask)
 
-SET(TestLibs OpenSoTVisualServoingTask ${OpenSoT_LIBRARIES} ${GTEST_BOTH_LIBRARIES} ${catkin_LIBRARIES} ${XBotInterface_LIBRARIES})
+SET(TestLibs OpenSoTVisualServoingTask ${OpenSoT_LIBRARIES} ${GTEST_BOTH_LIBRARIES} ${catkin_LIBRARIES} xbot2_interface::xbot2_interface)
 
 ADD_EXECUTABLE(testVisualServoingVelocityTask tasks/velocity/TestVisualServoing.cpp)
 TARGET_LINK_LIBRARIES(testVisualServoingVelocityTask ${TestLibs})

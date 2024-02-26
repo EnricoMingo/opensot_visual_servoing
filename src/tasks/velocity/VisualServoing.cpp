@@ -7,12 +7,11 @@
 using namespace OpenSoT::tasks::velocity;
 
 VisualServoing::VisualServoing(std::string task_id,
-                               const Eigen::VectorXd &x,
                                XBot::ModelInterface &robot,
                                std::string base_link,
                                std::string camera_link,
                                std::list<vpBasicFeature *>& feature_list):
-    Task(task_id, x.size()),
+    Task(task_id, robot.getNv()),
     _featureList(feature_list),
     _desiredFeatureList(feature_list),
     _eye_in_hand(true)
@@ -21,7 +20,7 @@ VisualServoing::VisualServoing(std::string task_id,
         _featureSelectionList.push_back(vpBasicFeature::FEATURE_ALL);
 
 
-    _cartesian_task = std::make_shared<Cartesian>("vs_"+camera_link, x, robot, camera_link, base_link);
+    _cartesian_task = std::make_shared<Cartesian>("vs_"+camera_link, robot, camera_link, base_link);
     _cartesian_task->setLambda(0.0); // not needed actually, just as reminder
     _cartesian_task->setIsBodyJacobian(true); //we want to control the robot in camera_frame
 
@@ -39,14 +38,14 @@ VisualServoing::VisualServoing(std::string task_id,
     }
 
     _hessianType = HST_SEMIDEF;
-    update(x);
+    update(Eigen::VectorXd(0));
 }
 
 void VisualServoing::_update(const Eigen::VectorXd &x)
 {
 
     //1) computes Cartesian quantities from Cartesian task
-    _cartesian_task->update(x);
+    _cartesian_task->update(Eigen::VectorXd(0));
     _J = _cartesian_task->getA(); //body jacobian
 
     //2) computes new Jacobian using the interaction matrix from VISP

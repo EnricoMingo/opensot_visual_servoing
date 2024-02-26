@@ -6,7 +6,6 @@
 #include <visp/vpBasicFeature.h>
 #include <matlogger2/matlogger2.h>
 
-using namespace XBot::Utils;
 
 namespace OpenSoT {
    namespace tasks {
@@ -27,7 +26,6 @@ namespace OpenSoT {
              * in construction all the features (rows of the interaction matrix) are tracked.
              */
             VisualServoing(std::string task_id,
-                           const Eigen::VectorXd& x,
                            XBot::ModelInterface &robot,
                            std::string base_link,
                            std::string camera_link,

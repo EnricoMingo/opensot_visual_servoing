@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <opensot_visual_seroving/tasks/velocity/VisualServoing.h>
-#include <XBotInterface/ModelInterface.h>
+#include <xbot2_interface/xbotinterface2.h>
 #include <ros/package.h>
 #include <boost/make_shared.hpp>
 #include <visp/vpFeaturePoint.h>
@@ -27,12 +27,21 @@
 #include <tf/transform_broadcaster.h>
 
 #include <OpenSoT/tasks/velocity/AngularMomentum.h>
+#include <fstream>
+#include <kdl_parser/kdl_parser.hpp>
 
 #if SELF_COLLISION_TEST
     #include <OpenSoT/constraints/velocity/SelfCollisionAvoidance.h>
 #endif
 
 namespace{
+std::string ReadFile(std::string path)
+{
+    std::ifstream t(path);
+    std::stringstream buffer;
+    buffer << t.rdbuf();
+    return buffer.str();
+}
 
 class testVisualServoingTask: public ::testing::Test
 {
@@ -45,20 +54,14 @@ protected:
         std::string coman_srdf_path = ros::package::getPath("coman_srdf")+"/srdf/coman.srdf";
         std::cout<<"coman_srdf_path: "<<coman_srdf_path<<std::endl;
 
-        ///TODO: check if files exists!
-
-        XBot::ConfigOptions opt;
-        opt.set_urdf_path(coman_urdf_path);
-        opt.set_srdf_path(coman_srdf_path);
-        opt.set_parameter<bool>("is_model_floating_base", true);
-        opt.set_parameter<std::string>("model_type", "RBDL");
-        opt.generate_jidmap();
-        _model = XBot::ModelInterface::getModel(opt);
+        _model = XBot::ModelInterface::getModel(ReadFile(coman_urdf_path),
+                                                ReadFile(coman_srdf_path),
+                                                "pin");
 
         base_link = "world";
         camera_frame = "torso";
 
-        q.setZero(_model->getJointNum());
+        q = _model->getNeutralQ();
         setHomingPosition();
 
         for(unsigned int i = 0; i < 4; ++i)
@@ -81,7 +84,7 @@ protected:
         _model->update();
 
 
-        vs_task = std::make_shared<OpenSoT::tasks::velocity::VisualServoing>("visual_servoing", q,
+        vs_task = std::make_shared<OpenSoT::tasks::velocity::VisualServoing>("visual_servoing",
                                                                                 *_model,
                                                                                 base_link, camera_frame,
                                                                                 generic_features);
@@ -89,56 +92,56 @@ protected:
     }
 
     void setHomingPosition() {
-        q[_model->getDofIndex("RHipSag")] = -25.0*M_PI/180.0;
-        q[_model->getDofIndex("RKneeSag")] = 50.0*M_PI/180.0;
-        q[_model->getDofIndex("RAnkSag")] = -25.0*M_PI/180.0;
+        q[_model->getQIndex("RHipSag")] = -25.0*M_PI/180.0;
+        q[_model->getQIndex("RKneeSag")] = 50.0*M_PI/180.0;
+        q[_model->getQIndex("RAnkSag")] = -25.0*M_PI/180.0;
 
-        q[_model->getDofIndex("LHipSag")] = -25.0*M_PI/180.0;
-        q[_model->getDofIndex("LKneeSag")] = 50.0*M_PI/180.0;
-        q[_model->getDofIndex("LAnkSag")] = -25.0*M_PI/180.0;
+        q[_model->getQIndex("LHipSag")] = -25.0*M_PI/180.0;
+        q[_model->getQIndex("LKneeSag")] = 50.0*M_PI/180.0;
+        q[_model->getQIndex("LAnkSag")] = -25.0*M_PI/180.0;
 
-        q[_model->getDofIndex("LShSag")] =  20.0*M_PI/180.0;
-        q[_model->getDofIndex("LShLat")] = 20.0*M_PI/180.0;
-        q[_model->getDofIndex("LShYaw")] = -15.0*M_PI/180.0;
-        q[_model->getDofIndex("LElbj")] = -80.0*M_PI/180.0;
+        q[_model->getQIndex("LShSag")] =  20.0*M_PI/180.0;
+        q[_model->getQIndex("LShLat")] = 20.0*M_PI/180.0;
+        q[_model->getQIndex("LShYaw")] = -15.0*M_PI/180.0;
+        q[_model->getQIndex("LElbj")] = -80.0*M_PI/180.0;
 
-        q[_model->getDofIndex("RShSag")] =  20.0*M_PI/180.0;
-        q[_model->getDofIndex("RShLat")] = -20.0*M_PI/180.0;
-        q[_model->getDofIndex("RShYaw")] = 15.0*M_PI/180.0;
-        q[_model->getDofIndex("RElbj")] = -80.0*M_PI/180.0;
+        q[_model->getQIndex("RShSag")] =  20.0*M_PI/180.0;
+        q[_model->getQIndex("RShLat")] = -20.0*M_PI/180.0;
+        q[_model->getQIndex("RShYaw")] = 15.0*M_PI/180.0;
+        q[_model->getQIndex("RElbj")] = -80.0*M_PI/180.0;
 
     }
 
     void setHomingPositionVSAM() {
-        q[_model->getDofIndex("WaistLat")] =  0.0;
-        q[_model->getDofIndex("WaistSag")] =  0.0;
-        q[_model->getDofIndex("WaistYaw")] =  0.0;
-        q[_model->getDofIndex("RShSag")] =  0.7047622086892001;
-        q[_model->getDofIndex("RShLat")] =  -0.5677635252336075;
-        q[_model->getDofIndex("RShYaw")] =  0.2890564140758947;
-        q[_model->getDofIndex("RElbj")] =  -1.6532190021255193;
-        q[_model->getDofIndex("RForearmPlate")] =  -0.0003280309196516731;
-        q[_model->getDofIndex("RWrj1")] =  -0.008641640605188954;
-        q[_model->getDofIndex("RWrj2")] =  -0.0013920145156089084;
-        q[_model->getDofIndex("LShSag")] =  0.5545755010440612;
-        q[_model->getDofIndex("LShLat")] =  0.6179429857281579;
-        q[_model->getDofIndex("LShYaw")] =  -0.2412515368003296;
-        q[_model->getDofIndex("LElbj")] =  -1.7123663089414456;
-        q[_model->getDofIndex("LForearmPlate")] =  -0.0007051899703876909;
-        q[_model->getDofIndex("LWrj1")] =  -0.013205282554514752;
-        q[_model->getDofIndex("LWrj2")] =  0.0037545474284079597;
-        q[_model->getDofIndex("RHipLat")] =  -0.73156157875935218;
-        q[_model->getDofIndex("RHipYaw")] =  0.;
-        q[_model->getDofIndex("RHipSag")] =  -0.1636185715937876;
-        q[_model->getDofIndex("RKneeSag")] =  1.1413767149293743;
-        q[_model->getDofIndex("RAnkSag")] =  -0.4421027118276261;
-        q[_model->getDofIndex("RAnkLat")] =  0.004101490304317014;
-        q[_model->getDofIndex("LHipLat")] =  0.73156157875935218;
-        q[_model->getDofIndex("LHipYaw")] =  0.;
-        q[_model->getDofIndex("LHipSag")] =  -0.1636185715937876;
-        q[_model->getDofIndex("LKneeSag")] =  0.8076545504729606;
-        q[_model->getDofIndex("LAnkSag")] =  -0.4695127574050335;
-        q[_model->getDofIndex("LAnkLat")] =  0.0012525979207698662;
+        q[_model->getQIndex("WaistLat")] =  0.0;
+        q[_model->getQIndex("WaistSag")] =  0.0;
+        q[_model->getQIndex("WaistYaw")] =  0.0;
+        q[_model->getQIndex("RShSag")] =  0.7047622086892001;
+        q[_model->getQIndex("RShLat")] =  -0.5677635252336075;
+        q[_model->getQIndex("RShYaw")] =  0.2890564140758947;
+        q[_model->getQIndex("RElbj")] =  -1.6532190021255193;
+        q[_model->getQIndex("RForearmPlate")] =  -0.0003280309196516731;
+        q[_model->getQIndex("RWrj1")] =  -0.008641640605188954;
+        q[_model->getQIndex("RWrj2")] =  -0.0013920145156089084;
+        q[_model->getQIndex("LShSag")] =  0.5545755010440612;
+        q[_model->getQIndex("LShLat")] =  0.6179429857281579;
+        q[_model->getQIndex("LShYaw")] =  -0.2412515368003296;
+        q[_model->getQIndex("LElbj")] =  -1.7123663089414456;
+        q[_model->getQIndex("LForearmPlate")] =  -0.0007051899703876909;
+        q[_model->getQIndex("LWrj1")] =  -0.013205282554514752;
+        q[_model->getQIndex("LWrj2")] =  0.0037545474284079597;
+        q[_model->getQIndex("RHipLat")] =  -0.73156157875935218;
+        q[_model->getQIndex("RHipYaw")] =  0.;
+        q[_model->getQIndex("RHipSag")] =  -0.1636185715937876;
+        q[_model->getQIndex("RKneeSag")] =  1.1413767149293743;
+        q[_model->getQIndex("RAnkSag")] =  -0.4421027118276261;
+        q[_model->getQIndex("RAnkLat")] =  0.004101490304317014;
+        q[_model->getQIndex("LHipLat")] =  0.73156157875935218;
+        q[_model->getQIndex("LHipYaw")] =  0.;
+        q[_model->getQIndex("LHipSag")] =  -0.1636185715937876;
+        q[_model->getQIndex("LKneeSag")] =  0.8076545504729606;
+        q[_model->getQIndex("LAnkSag")] =  -0.4695127574050335;
+        q[_model->getQIndex("LAnkLat")] =  0.0012525979207698662;
 
     }
 
@@ -254,7 +257,7 @@ TEST_F(testVisualServoingTask, testBasics)
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
     std::list<vpBasicFeature *> generic_desired_features(std::begin(this->desired_features), std::end(this->desired_features));
     this->vs_task->setDesiredFeatures(generic_desired_features);
-    this->vs_task->update(this->q);
+    this->vs_task->update(Eigen::VectorXd(0));
 
     this->vs_task->log(logger);
 
@@ -280,7 +283,7 @@ TEST_F(testVisualServoingTask, testBasics)
         point_feature->set_Z(2*(3*i+2));
         i++;
     }
-    this->vs_task->update(this->q);
+    this->vs_task->update(Eigen::VectorXd(0));
     expected_b.setZero(expected_b.size());
     std::cout<<"expected_b: \n"<<expected_b<<std::endl;
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
@@ -291,7 +294,7 @@ TEST_F(testVisualServoingTask, testBasics)
 
 TEST_F(testVisualServoingTask, testJacobians)
 {
-    this->vs_task->update(this->q);
+    this->vs_task->update(Eigen::VectorXd(0));
     Eigen::MatrixXd A = this->vs_task->getA();
     Eigen::MatrixXd b = this->vs_task->getb();
 
@@ -302,14 +305,14 @@ TEST_F(testVisualServoingTask, testJacobians)
 
     std::list<unsigned int> id = {0,2,3};
     OpenSoT::tasks::Aggregated::TaskPtr vs = this->vs_task%id;
-    vs->update(this->q);
+    vs->update(Eigen::VectorXd(0));
 
     std::cout<<"vs->getA(): \n"<<vs->getA()<<std::endl;
 
     EXPECT_FALSE(A.rows() == vs->getA().rows());
 
     OpenSoT::tasks::velocity::Cartesian::Ptr foo =
-            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("foo", this->q, *(this->_model),
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("foo", *(this->_model),
                                                                     this->camera_frame, this->base_link);
 
     OpenSoT::tasks::Aggregated::TaskPtr aggr_tasks = foo%id + this->vs_task%id;
@@ -345,7 +348,7 @@ TEST_F(testVisualServoingTask, testProjection)
       this->vs_task->addFeature(p[i], pd[i]);
     }
     
-    this->vs_task->update(this->q);
+    this->vs_task->update(Eigen::VectorXd(0));
     
     //vpMatrix L_visp;
     Eigen::MatrixXd L, Lpinv;
@@ -361,7 +364,7 @@ TEST_F(testVisualServoingTask, testProjection)
     robot.getPosition(wMc);
     wMo = wMc * cMo;
 
-    std::cout << "wMo: " << wMo << std::endl; 
+    std::cout << "wMo: " << wMo << std::endl;
     
     for (unsigned int iter = 0; iter < 3000; iter++) {
 
@@ -399,7 +402,7 @@ TEST_F(testVisualServoingTask, testProjection)
             vpFeatureBuilder::create(p[i], point[i]);
             this->vs_task->addFeature(p[i], pd[i]);
         }
-        this->vs_task->update(this->q);
+        this->vs_task->update(Eigen::VectorXd(0));
     
     }
 
@@ -434,7 +437,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
             point_feature->set_x(10);
             point_feature->set_y(-10);
             point_feature->set_Z(1);
-        }    
+        }
         i++;
     }
 
@@ -460,7 +463,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
             point_feature->set_x(5);
             point_feature->set_y(-5);
             point_feature->set_Z(1);
-        }    
+        }
         i++;
     }
     
@@ -480,7 +483,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
             feature_selection
     );
 
-    this->vs_task->update(this->q);
+    this->vs_task->update(Eigen::VectorXd(0));
     
     Eigen::MatrixXd A = this->vs_task->getA();
     Eigen::MatrixXd b = this->vs_task->getb();
@@ -530,7 +533,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
         for(auto point_feature : this->point_features)
         {
             //std::cout << "---------------------------" << std::endl;
-            //std::cout << "i: " << i << std::endl; 
+            //std::cout << "i: " << i << std::endl;
             
             x = point_feature->get_x();
             y = point_feature->get_y();
@@ -561,7 +564,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
             EXPECT_TRUE(this->vs_task->setFeatures(generic_curr_features));
         
         // not sure I need this
-        this->vs_task->update(this->q);
+        this->vs_task->update(Eigen::VectorXd(0));
         
         A = this->vs_task->getA();
         b = this->vs_task->getb();
@@ -673,7 +676,7 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
 
 
     Eigen::VectorXd q = this->q;
-    Eigen::VectorXd dq(q.rows());
+    Eigen::VectorXd dq(_model->getNv());
     dq.setZero();
 
     /// It should be implemented a function which project points on the image plane
@@ -721,14 +724,14 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
         else
             EXPECT_TRUE(this->vs_task->setFeatures(generic_curr_features));
 
-        q += dq;
+        q = _model->sum(q, dq);
         //std::cout<<"q: "<<q.transpose()<<std::endl;
 
 
         this->_model->setJointPosition(q);
         this->_model->update();
 
-        stack->update(q);
+        stack->update(Eigen::VectorXd(0));
 
         EXPECT_TRUE(solver->solve(dq));
 
@@ -763,7 +766,7 @@ void publishRobotModel(robot_state_publisher::RobotStatePublisher* robot_state_p
     XBot::JointNameMap joint_unordered_map;
     model->getJointPosition(joint_unordered_map);
     std::map<std::string, double> joint_map;
-    std::vector<std::string> virtual_joints = {"VIRTUALJOINT_1", "VIRTUALJOINT_2", "VIRTUALJOINT_3", "VIRTUALJOINT_4", "VIRTUALJOINT_5", "VIRTUALJOINT_6"};
+    std::vector<std::string> virtual_joints = {"reference@q0", "reference@q1", "reference@q2", "reference@q3", "reference@q4", "reference@q5", "reference@q6"};
     for(auto j : joint_unordered_map)
     {
         if(!(std::find(virtual_joints.begin(), virtual_joints.end(), j.first) != virtual_joints.end()))
@@ -808,7 +811,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     {
         nh = std::make_shared<ros::NodeHandle>();
         nh->setParam("robot_description", this->_model->getUrdfString());
-        if(!kdl_parser::treeFromUrdfModel(_model->getUrdf(), tree))
+        if(!kdl_parser::treeFromUrdfModel(*_model->getUrdf(), tree))
             ROS_ERROR("Failed to construct kdl tree");
         robot_state_publisher_ = std::make_shared<robot_state_publisher::RobotStatePublisher>(tree);
         world_broadcaster = std::make_shared<tf::TransformBroadcaster>();
@@ -818,36 +821,36 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testOpenSoTTask");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr l_sole =
-            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_sole", this->q, *(this->_model), "l_sole", "world");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_sole",*(this->_model), "l_sole", "world");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr r_sole =
-            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_sole", this->q, *(this->_model), "r_sole", "world");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_sole",*(this->_model), "r_sole", "world");
 
     OpenSoT::tasks::velocity::CoM::Ptr com =
-            std::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
+            std::make_shared<OpenSoT::tasks::velocity::CoM>(*(this->_model));
     com->setLambda(0.1);
 
     OpenSoT::tasks::velocity::Postural::Ptr postural =
-            std::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
+            std::make_shared<OpenSoT::tasks::velocity::Postural>(*_model);
     postural->setLambda(0.1);
 
     double dt = 0.001;
     if(is_ros_running)
         rate = std::make_shared<ros::Rate>(1./dt);
     OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
-            std::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(M_PI, dt, this->q.size());
+            std::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(*_model, M_PI, dt);
 
     OpenSoT::tasks::velocity::Cartesian::Ptr l_arm =
-            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_arm", this->q, *(this->_model), "LSoftHand", "torso");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("l_arm", *(this->_model), "LSoftHand", "torso");
 
     OpenSoT::tasks::velocity::Cartesian::Ptr r_arm =
-            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_arm", this->q, *(this->_model), "RSoftHand", "torso");
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>("r_arm", *(this->_model), "RSoftHand", "torso");
 
 
     Eigen::VectorXd qmin, qmax;
     this->_model->getJointLimits(qmin, qmax);
     OpenSoT::constraints::velocity::JointLimits::Ptr joint_lims =
-            std::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
+            std::make_shared<OpenSoT::constraints::velocity::JointLimits>(*_model, qmax, qmin);
 
 
     this->vs_task->setLambda(0.001);
@@ -862,7 +865,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     
     // Get the camera pose
     Eigen::Affine3d T;
-    this->_model->getPose(camera_frame, T); 
+    this->_model->getPose(camera_frame, T);
     //std::cout << "T: " << T.matrix() << std::endl;
     vpHomogeneousMatrix wMt, wMc;
     eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
@@ -879,14 +882,14 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     /// Object frame initial pose
     vpHomogeneousMatrix wMo = wMc * cMo;
     
-    /// Define the visual pattern: 4 points at the verteces of a square around the object frame  
+    /// Define the visual pattern: 4 points at the verteces of a square around the object frame
     vpPoint point[4];
     point[0].setWorldCoordinates(-0.1, -0.1, 0);
     point[1].setWorldCoordinates(0.1, -0.1, 0);
     point[2].setWorldCoordinates(0.1, 0.1, 0);
     point[3].setWorldCoordinates(-0.1, 0.1, 0);
 
-    /// Define the current and desired visual features 
+    /// Define the current and desired visual features
     /// (projecting the points with the current and desired camera pose)
     vpFeaturePoint p[4], pd[4];
     this->vs_task->clearFeatures();
@@ -898,7 +901,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
       this->vs_task->addFeature(p[i], pd[i]);
     }
 
-    // Not sure I need this 
+    // Not sure I need this
     this->vs_task->update(this->q);
     
     /*
@@ -918,7 +921,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
     Eigen::VectorXd q, dq, ds;
     q = this->q;
-    dq.setZero(q.size());
+    dq.setZero(_model->getNv());
 
     if(is_ros_running)
         robot_state_publisher_->publishFixedTransforms(true);
@@ -928,13 +931,13 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
         this->vs_task->log(logger);
 
         //1. Models update
-        q += dq;
+        q = _model->sum(q, dq);
         //ds = this->vs_task->getA() * dq;
 
         this->_model->setJointPosition(q);
         this->_model->update();
 
-        this->_model->getPose(camera_frame, T); 
+        this->_model->getPose(camera_frame, T);
         eigen2visp<vpHomogeneousMatrix>(T.matrix(), wMc);
         //wMc = wMt * tMc;
         cMo = wMc.inverse() * wMo;
@@ -946,6 +949,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
             this->vs_task->addFeature(p[i], pd[i]);
         }
         this->vs_task->update(this->q);
+
         
         /*
         double x, x_new, y, y_new;
@@ -976,11 +980,10 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
 
 
         //2. stack update
-        Eigen::MatrixXd B;
-        this->_model->getInertiaMatrix(B);
+        Eigen::MatrixXd B = this->_model->computeInertiaMatrix();
         postural->setWeight(B);
 
-        stack->update(q);
+        stack->update(Eigen::VectorXd(0));
 
         //3. solve
         EXPECT_TRUE(solver->solve(dq));
@@ -999,7 +1002,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     //5. check visual servoing convergence
     EXPECT_LE(this->vs_task->getFeaturesError().norm(), 1e-3);
     
-    std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;  
+    std::cout<<"visual servoing error norm: "<<this->vs_task->getFeaturesError().norm()<<std::endl;
 }
 
 TEST_F(testVisualServoingTask, testVSAM)
@@ -1024,7 +1027,7 @@ TEST_F(testVisualServoingTask, testVSAM)
     {
         nh = std::make_shared<ros::NodeHandle>();
         nh->setParam("robot_description", this->_model->getUrdfString());
-        if(!kdl_parser::treeFromUrdfModel(_model->getUrdf(), tree))
+        if(!kdl_parser::treeFromUrdfModel(*_model->getUrdf(), tree))
             ROS_ERROR("Failed to construct kdl tree");
         robot_state_publisher_ = std::make_shared<robot_state_publisher::RobotStatePublisher>(tree);
         world_broadcaster = std::make_shared<tf::TransformBroadcaster>();
@@ -1034,20 +1037,20 @@ TEST_F(testVisualServoingTask, testVSAM)
     XBot::MatLogger2::Ptr logger = getLogger("testVisualServoingTask_testVSAM");
 
     OpenSoT::tasks::velocity::CoM::Ptr com =
-            std::make_shared<OpenSoT::tasks::velocity::CoM>(this->q, *(this->_model));
+            std::make_shared<OpenSoT::tasks::velocity::CoM>(*(this->_model));
     com->setLambda(0.);
 
     OpenSoT::tasks::velocity::AngularMomentum::Ptr mom =
-            std::make_shared<OpenSoT::tasks::velocity::AngularMomentum>(this->q, *(this->_model));
+            std::make_shared<OpenSoT::tasks::velocity::AngularMomentum>(*(this->_model));
 
 
     OpenSoT::tasks::velocity::Postural::Ptr postural =
-            std::make_shared<OpenSoT::tasks::velocity::Postural>(this->q);
+            std::make_shared<OpenSoT::tasks::velocity::Postural>(*_model);
     postural->setLambda(0.005);
     Eigen::MatrixXd W = postural->getWeight();
     for(unsigned int i = 0; i < 6; ++i)
         W(i,i) = 0.0;
-    W(this->_model->getDofIndex("WaistYaw"),this->_model->getDofIndex("WaistYaw")) = 20.;
+    W(this->_model->getQIndex("WaistYaw"),this->_model->getQIndex("WaistYaw")) = 20.;
     postural->setWeight(W);
 
     double dt = 0.01;
@@ -1057,17 +1060,17 @@ TEST_F(testVisualServoingTask, testVSAM)
     this->_model->getVelocityLimits(qdotlims);
     std::cout<<"dq lims: "<<qdotlims.transpose()<<std::endl;
     OpenSoT::constraints::velocity::VelocityLimits::Ptr vel_lims =
-            std::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(qdotlims, dt);
+            std::make_shared<OpenSoT::constraints::velocity::VelocityLimits>(*_model, qdotlims, dt);
 
     Eigen::VectorXd qmin, qmax;
     this->_model->getJointLimits(qmin, qmax);
     OpenSoT::constraints::velocity::JointLimits::Ptr joint_lims =
-            std::make_shared<OpenSoT::constraints::velocity::JointLimits>(this->q, qmax, qmin);
+            std::make_shared<OpenSoT::constraints::velocity::JointLimits>(*_model, qmax, qmin);
 
     this->vs_task->setLambda(0.01);
 
     OpenSoT::tasks::velocity::Cartesian::Ptr camera =
-            std::make_shared<OpenSoT::tasks::velocity::Cartesian>(this->camera_frame, this->q,
+            std::make_shared<OpenSoT::tasks::velocity::Cartesian>(this->camera_frame,
                                                                     *this->_model, this->camera_frame, this->base_link);
     camera->setLambda(0.);
     std::list<unsigned int> id = {2};
@@ -1138,7 +1141,7 @@ TEST_F(testVisualServoingTask, testVSAM)
 
     Eigen::VectorXd q, dq;
     q = this->q;
-    dq.setZero(q.size());
+    dq.setZero(_model->getNv());
 
     if(is_ros_running)
         robot_state_publisher_->publishFixedTransforms(true);
@@ -1148,7 +1151,7 @@ TEST_F(testVisualServoingTask, testVSAM)
         this->vs_task->log(logger);
 
         //1. Models update
-        q += dq;
+        q = _model->sum(q, dq);
 
         this->_model->setJointPosition(q);
         this->_model->update();
@@ -1168,7 +1171,7 @@ TEST_F(testVisualServoingTask, testVSAM)
             publishRobotModel(robot_state_publisher_.get(), world_broadcaster.get(), this->_model.get());
 
         //2. stack update
-        stack->update(q);
+        stack->update(Eigen::VectorXd(0));
 
         //3. solve
         bool solved = solver->solve(dq);

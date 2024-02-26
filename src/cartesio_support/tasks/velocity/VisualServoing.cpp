@@ -302,14 +302,10 @@ OpenSotVisualServoingAdapter::OpenSotVisualServoingAdapter(TaskDescription::Ptr 
 
 TaskPtr OpenSotVisualServoingAdapter::constructTask()
 {
-    Eigen::VectorXd q;
-    _model->getJointPosition(q);
-
-
     std::list<vpBasicFeature *> features = _ci_vs->getFeatures();
 
     std::string id = "visual_servoing_"+_ci_vs->getDistalLink();
-    _opensot_vs = std::make_shared<VSSoT>(id, q, const_cast<ModelInterface&>(*_model),
+    _opensot_vs = std::make_shared<VSSoT>(id,const_cast<ModelInterface&>(*_model),
                                             _ci_vs->getBaseLink(), _ci_vs->getDistalLink(), features);
     _opensot_vs->setLambda(_ci_vs->getLambda());
 

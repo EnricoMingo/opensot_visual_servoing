@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.0)
-project(opensot_visual_servoing)
+include(ExternalProject)
+project(opensot_visual_servoing CXX)
 
-add_compile_options(-std=c++11)
+
+add_compile_options(-std=c++2a)
+
 
 option(COMPILE_TESTS "Compile tests" FALSE)
 
@@ -59,7 +62,9 @@ add_library(OpenSoTVisualServoingTask SHARED
     src/utils/Utils.cpp)
 
 target_link_libraries(OpenSoTVisualServoingTask
-    ${catkin_LIBRARIES} ${OpenSoT_LIBRARIES} ${VISP_LIBRARIES})
+    ${OpenSoT_LIBRARIES}
+    ${catkin_LIBRARIES}
+    ${VISP_LIBRARIES})
 
 install(TARGETS OpenSoTVisualServoingTask
         DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
@@ -71,7 +76,10 @@ install(TARGETS OpenSoTVisualServoingTask
 add_library(CartesioVisualServoing SHARED
 		src/cartesio_support/tasks/velocity/VisualServoing.cpp)
 
-target_link_libraries(CartesioVisualServoing OpenSoTVisualServoingTask ${cartesian_interface_LIBRARIES} ${catkin_LIBRARIES})
+target_link_libraries(CartesioVisualServoing
+    OpenSoTVisualServoingTask
+    ${cartesian_interface_LIBRARIES}
+    ${catkin_LIBRARIES})
 
 install(TARGETS CartesioVisualServoing
         DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
