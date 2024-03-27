@@ -257,7 +257,7 @@ TEST_F(testVisualServoingTask, testBasics)
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
     std::list<vpBasicFeature *> generic_desired_features(std::begin(this->desired_features), std::end(this->desired_features));
     this->vs_task->setDesiredFeatures(generic_desired_features);
-    this->vs_task->update(Eigen::VectorXd(0));
+    this->vs_task->update();
 
     this->vs_task->log(logger);
 
@@ -283,7 +283,7 @@ TEST_F(testVisualServoingTask, testBasics)
         point_feature->set_Z(2*(3*i+2));
         i++;
     }
-    this->vs_task->update(Eigen::VectorXd(0));
+    this->vs_task->update();
     expected_b.setZero(expected_b.size());
     std::cout<<"expected_b: \n"<<expected_b<<std::endl;
     std::cout<<"b: \n"<<this->vs_task->getb()<<std::endl;
@@ -294,7 +294,7 @@ TEST_F(testVisualServoingTask, testBasics)
 
 TEST_F(testVisualServoingTask, testJacobians)
 {
-    this->vs_task->update(Eigen::VectorXd(0));
+    this->vs_task->update();
     Eigen::MatrixXd A = this->vs_task->getA();
     Eigen::MatrixXd b = this->vs_task->getb();
 
@@ -305,7 +305,7 @@ TEST_F(testVisualServoingTask, testJacobians)
 
     std::list<unsigned int> id = {0,2,3};
     OpenSoT::tasks::Aggregated::TaskPtr vs = this->vs_task%id;
-    vs->update(Eigen::VectorXd(0));
+    vs->update();
 
     std::cout<<"vs->getA(): \n"<<vs->getA()<<std::endl;
 
@@ -348,7 +348,7 @@ TEST_F(testVisualServoingTask, testProjection)
       this->vs_task->addFeature(p[i], pd[i]);
     }
     
-    this->vs_task->update(Eigen::VectorXd(0));
+    this->vs_task->update();
     
     //vpMatrix L_visp;
     Eigen::MatrixXd L, Lpinv;
@@ -402,7 +402,7 @@ TEST_F(testVisualServoingTask, testProjection)
             vpFeatureBuilder::create(p[i], point[i]);
             this->vs_task->addFeature(p[i], pd[i]);
         }
-        this->vs_task->update(Eigen::VectorXd(0));
+        this->vs_task->update();
     
     }
 
@@ -483,7 +483,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
             feature_selection
     );
 
-    this->vs_task->update(Eigen::VectorXd(0));
+    this->vs_task->update();
     
     Eigen::MatrixXd A = this->vs_task->getA();
     Eigen::MatrixXd b = this->vs_task->getb();
@@ -564,7 +564,7 @@ TEST_F(testVisualServoingTask, testStandardVS)
             EXPECT_TRUE(this->vs_task->setFeatures(generic_curr_features));
         
         // not sure I need this
-        this->vs_task->update(Eigen::VectorXd(0));
+        this->vs_task->update();
         
         A = this->vs_task->getA();
         b = this->vs_task->getb();
@@ -731,7 +731,7 @@ TEST_F(testVisualServoingTask, testOpenSoTTask)
         this->_model->setJointPosition(q);
         this->_model->update();
 
-        stack->update(Eigen::VectorXd(0));
+        stack->update();
 
         EXPECT_TRUE(solver->solve(dq));
 
@@ -902,7 +902,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     }
 
     // Not sure I need this
-    this->vs_task->update(this->q);
+    this->vs_task->update();
     
     /*
     this->desired_features.clear();
@@ -917,7 +917,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
     EXPECT_TRUE(this->vs_task->setDesiredFeatures(feature_list));
     */
 
-    stack->update(this->q);
+    stack->update();
 
     Eigen::VectorXd q, dq, ds;
     q = this->q;
@@ -948,7 +948,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
             vpFeatureBuilder::create(p[i], point[i]);
             this->vs_task->addFeature(p[i], pd[i]);
         }
-        this->vs_task->update(this->q);
+        this->vs_task->update();
 
         
         /*
@@ -983,7 +983,7 @@ TEST_F(testVisualServoingTask, testWholeBodyVisualServoing)
         Eigen::MatrixXd B = this->_model->computeInertiaMatrix();
         postural->setWeight(B);
 
-        stack->update(Eigen::VectorXd(0));
+        stack->update();
 
         //3. solve
         EXPECT_TRUE(solver->solve(dq));
@@ -1137,7 +1137,7 @@ TEST_F(testVisualServoingTask, testVSAM)
       this->vs_task->addFeature(p[i], pd[i]);
     }
 
-    stack->update(this->q);
+    stack->update();
 
     Eigen::VectorXd q, dq;
     q = this->q;
@@ -1171,7 +1171,7 @@ TEST_F(testVisualServoingTask, testVSAM)
             publishRobotModel(robot_state_publisher_.get(), world_broadcaster.get(), this->_model.get());
 
         //2. stack update
-        stack->update(Eigen::VectorXd(0));
+        stack->update();
 
         //3. solve
         bool solved = solver->solve(dq);

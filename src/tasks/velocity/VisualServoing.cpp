@@ -38,14 +38,14 @@ VisualServoing::VisualServoing(std::string task_id,
     }
 
     _hessianType = HST_SEMIDEF;
-    update(Eigen::VectorXd(0));
+    update();
 }
 
-void VisualServoing::_update(const Eigen::VectorXd &x)
+void VisualServoing::_update()
 {
 
     //1) computes Cartesian quantities from Cartesian task
-    _cartesian_task->update(Eigen::VectorXd(0));
+    _cartesian_task->update();
     _J = _cartesian_task->getA(); //body jacobian
 
     //2) computes new Jacobian using the interaction matrix from VISP

@@ -178,7 +178,7 @@ namespace OpenSoT {
              * @brief _update
              * @param x
              */
-            void _update(const Eigen::VectorXd& x);
+            void _update();
 
             /**
              * @brief compute_b
