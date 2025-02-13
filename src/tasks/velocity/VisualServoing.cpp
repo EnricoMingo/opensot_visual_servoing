@@ -22,7 +22,7 @@ VisualServoing::VisualServoing(std::string task_id,
 
     _cartesian_task = std::make_shared<Cartesian>("vs_"+camera_link, robot, camera_link, base_link);
     _cartesian_task->setLambda(0.0); // not needed actually, just as reminder
-    _cartesian_task->setIsBodyJacobian(true); //we want to control the robot in camera_frame
+    _cartesian_task->rotateToLocal(true); //we want to control the robot in camera_frame
 
     _V.setIdentity(); //intialize sensor_frame and camera_frame coincident 
 
